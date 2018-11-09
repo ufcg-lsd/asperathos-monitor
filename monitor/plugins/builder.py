@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from monitor import exceptions as ex
 from monitor.service import api
+from monitor.plugins.kubejobs.plugin import KubeJobProgress
 from monitor.plugins.spark_sahara.plugin import SparkProgress
 from monitor.plugins.spark_mesos.plugin import SparkProgressUPV
 from monitor.plugins.web_app.plugin import WebAppMonitor
@@ -26,20 +28,23 @@ class MonitorBuilder:
 
     def get_monitor(self, plugin, app_id, plugin_info):
         executor = None
+
         if plugin == "spark_sahara":
-            executor = SparkProgress(app_id, plugin_info, api.retries)
+            executor = SparkProgress(app_id, plugin_info)
 
         elif plugin == "web_app":
-            executor = WebAppMonitor(app_id, plugin_info, api.os_keypair,
-                                     api.retries)
+            executor = WebAppMonitor(app_id, plugin_info, api.os_keypair)
 
         elif plugin == "openstack_generic":
             executor = OSGeneric(app_id, plugin_info, api.os_keypair,
                                  api.retries)
 
         elif plugin == "spark_mesos":
-            executor = SparkProgressUPV(app_id, plugin_info, api.retries)
+            executor = SparkProgressUPV(app_id, plugin_info, retries=api.retries)
        
+        elif plugin == "kubejobs":
+            executor = KubeJobProgress(app_id, plugin_info, retries=api.retries)
+
         else:
             raise ex.BadRequestException()
 

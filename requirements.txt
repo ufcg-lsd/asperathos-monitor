@@ -5,3 +5,5 @@ tzlocal
 python-monascaclient==1.5.0
 python-keystoneclient
 paramiko
+redis
+kubernetes

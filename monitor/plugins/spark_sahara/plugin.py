@@ -32,7 +32,7 @@ configure_logging()
 
 class SparkProgress(Plugin):
 
-    def __init__(self, app_id, info_plugin, collect_period, retries=60):
+    def __init__(self, app_id, info_plugin, collect_period=2, retries=60):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
 

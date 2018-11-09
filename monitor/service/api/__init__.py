@@ -28,14 +28,15 @@ try:
     port = config.getint('general', 'port')
     plugins = config.get('general', 'plugins').split(',')
     use_debug = config.get('general', 'debug')
+    retries = config.getint('general', 'retries')
+
 
     """ Validate if really exists a section to listed plugins """
     for plugin in plugins:
-        if plugin not in config.sections():
+        if plugin != '' and plugin not in config.sections():
             raise Exception("plugin '%s' section missing" % plugin)
     
     if 'openstack_generic' in plugins:
-        retries = config.getint('openstack_generic', 'retries')
         os_keypair = config.get('openstack_generic', 'key_pair')
     
     if 'spark_mesos' in plugins:
