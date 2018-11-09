@@ -40,20 +40,18 @@ class KubeJobProgress(Plugin):
         if self.enable_monasca:
             self.monasca = MonascaConnector()
         self.submission_url = info_plugin['count_jobs_url']
-        # print self.submission_url
         self.expected_time = int(info_plugin['expected_time'])
         self.number_of_jobs = int(info_plugin['number_of_jobs'])
         self.submission_time = datetime.strptime(info_plugin['submission_time'],
                                                  '%Y-%m-%dT%H:%M:%S.%fGMT')
         self.dimensions = {'application_id': self.app_id,
                            'service': 'kubejobs'}
-        # print info_plugin['redis_ip'], info_plugin['redis_port']
         self.rds = redis.StrictRedis(host=info_plugin['redis_ip'],
                                      port=info_plugin['redis_port'])
         self.metric_queue = "%s:metrics" % self.app_id
         self.current_job_id = 0
 
-    def _publish_measurement(self, job_request):
+    def _publish_measurement(self, jobs_completed):
 
         application_progress_error = {}
         job_progress_error = {}
@@ -62,13 +60,11 @@ class KubeJobProgress(Plugin):
         parallelism = {}
 
         # Init
-        jobs_completed = int(job_request.json())
         print "Jobs Completed: %i" % jobs_completed
 
         # Job Progress
 
         job_progress = min(1.0, (float(jobs_completed) / self.number_of_jobs))
-
         # Elapsed Time
         elapsed_time = float(self._get_elapsed_time())
 
@@ -101,11 +97,6 @@ class KubeJobProgress(Plugin):
         time_progress_error['timestamp'] = time.time() * 1000
         time_progress_error['dimensions'] = self.dimensions
 
-        cluster_size['name'] = "cluster_size"
-        cluster_size['value'] = self._get_cluster_size()
-        cluster_size['timestamp'] = time.time() * 1000
-        cluster_size['dimensions'] = self.dimensions
-
         parallelism['name'] = "job-parallelism"
         parallelism['value'] = replicas
         parallelism['timestamp'] = time.time() * 1000
@@ -121,27 +112,10 @@ class KubeJobProgress(Plugin):
             self.monasca.send_metrics([application_progress_error])
             self.monasca.send_metrics([job_progress_error])
             self.monasca.send_metrics([time_progress_error])
-            self.monasca.send_metrics([cluster_size])
             self.monasca.send_metrics([parallelism])
 
 
         time.sleep(MONITORING_INTERVAL)
-
-    def _get_cluster_size(self):
-
-        bash_command = 'kubectl get nodes'
-        p = subprocess.Popen(bash_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
-        o, e = p.communicate()
-
-        
-        lines = o.split('\n')
-        nodes = {}
-
-        for l in lines:
-            if len(l) > 0 and "NAME" not in l:
-                nodes[l.split()[0]] = 0
-
-        return len(nodes)-1
 
     def _get_num_replicas(self):
         kubernetes.config.load_kube_config()
@@ -160,10 +134,12 @@ class KubeJobProgress(Plugin):
 
     def monitoring_application(self):
         try:
-            job_request = requests.get('%s/redis-%s/job:results/count' % (self.submission_url,
+            job_request = requests.get('http://%s/redis-%s/job/count' % (self.submission_url,
                                                                           self.app_id))
-
-            self._publish_measurement(job_request)
+            job_processing = requests.get('http://%s/redis-%s/job:processing/count' % (self.submission_url,
+                                                                          self.app_id))
+            job_progress = self.number_of_jobs - (int(job_request.json()) + int(job_processing.json()))
+            self._publish_measurement(jobs_completed=job_progress)
 
         except Exception as ex:
             print ("Error: No application found for %s. %s remaining attempts"
