@@ -24,7 +24,9 @@ from datetime import datetime
 
 from monitor.plugins.kubejobs.plugin import KubeJobProgress
 
-
+"""
+Class that tests the KubeJobsPlugin components.
+"""
 class TestKubeJobs(unittest.TestCase):
 
     """

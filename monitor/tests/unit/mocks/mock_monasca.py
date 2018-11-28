@@ -13,14 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+"""
+Class that define a MonascaConnector simulation.
+"""
 class MockMonascaConnector():
 
+    """ Constructor of the mock of a MonascaConnector object
+    
+    Returns:
+        MockRedis: The simulation of a redis object
+    """
     def __init__(self):
 
         self.metrics = {}
 
-    
+    """
+    Simulate the behavior of send_metrics function
+    Monasca Connector api.
+    Args:
+        metrics(Objects): Object that must be send to monasca.
+    """
     def send_metrics(self, metrics):
 
         try:
