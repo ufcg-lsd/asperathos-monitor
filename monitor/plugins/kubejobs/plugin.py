@@ -51,7 +51,7 @@ class KubeJobProgress(Plugin):
         self.metric_queue = "%s:metrics" % self.app_id
         self.current_job_id = 0
         if self.enable_visualizer:
-            datasource_type = info_plugin['info_visualizer']['datasource_type']
+            datasource_type = info_plugin['datasource_type']
             if datasource_type == "monasca":
                 self.datasource = MonascaConnector()
             
