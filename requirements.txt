@@ -7,3 +7,4 @@ python-keystoneclient
 paramiko
 redis
 kubernetes
+influxdb

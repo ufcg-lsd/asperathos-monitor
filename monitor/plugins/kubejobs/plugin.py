@@ -21,7 +21,9 @@ from subprocess import PIPE
 
 from datetime import datetime
 from monitor.utils.monasca.connector import MonascaConnector
+from monitor.utils.influxdb.connector import InfluxConnector
 from monitor.plugins.base import Plugin
+from influxdb import InfluxDBClient
 
 import kubernetes
 
@@ -36,9 +38,7 @@ class KubeJobProgress(Plugin):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
 
-        self.enable_monasca = info_plugin['graphic_metrics']
-        if self.enable_monasca:
-            self.monasca = MonascaConnector()
+        self.enable_visualizer = info_plugin['enable_visualizer']
         self.submission_url = info_plugin['count_jobs_url']
         self.expected_time = int(info_plugin['expected_time'])
         self.number_of_jobs = int(info_plugin['number_of_jobs'])
@@ -50,6 +50,19 @@ class KubeJobProgress(Plugin):
                                      port=info_plugin['redis_port'])
         self.metric_queue = "%s:metrics" % self.app_id
         self.current_job_id = 0
+        if self.enable_visualizer:
+            datasource_type = info_plugin['info_visualizer']['datasource_type']
+            if datasource_type == "monasca":
+                self.datasource = MonascaConnector()
+            
+            elif datasource_type == "influxdb":
+                influx_url = info_plugin['database_data']['url']
+                influx_port = info_plugin['database_data']['port']
+                database_name = info_plugin['database_data']['name']
+                self.datasource = InfluxConnector(influx_url, influx_port, database_name)
+            else:
+                print("Unknown datasource type...!")
+        
 
     def _publish_measurement(self, jobs_completed):
 
@@ -80,19 +93,16 @@ class KubeJobProgress(Plugin):
 
         application_progress_error['name'] = ('application-progress'
                                               '.error')
-
-        job_progress_error['name'] = 'job-progress'
-
-        time_progress_error['name'] = 'time-progress'
-
         application_progress_error['value'] = error
         application_progress_error['timestamp'] = time.time() * 1000
         application_progress_error['dimensions'] = self.dimensions
 
+        job_progress_error['name'] = 'job-progress'
         job_progress_error['value'] = job_progress
         job_progress_error['timestamp'] = time.time() * 1000
         job_progress_error['dimensions'] = self.dimensions
 
+        time_progress_error['name'] = 'time-progress'
         time_progress_error['value'] = ref_value
         time_progress_error['timestamp'] = time.time() * 1000
         time_progress_error['dimensions'] = self.dimensions
@@ -102,19 +112,17 @@ class KubeJobProgress(Plugin):
         parallelism['timestamp'] = time.time() * 1000
         parallelism['dimensions'] = self.dimensions
 
-
         print "Error: %s " % application_progress_error['value']
 
         self.rds.rpush(self.metric_queue,
-                       application_progress_error)
+                       str(application_progress_error))
 
-        if self.enable_monasca:
-            self.monasca.send_metrics([application_progress_error])
-            self.monasca.send_metrics([job_progress_error])
-            self.monasca.send_metrics([time_progress_error])
-            self.monasca.send_metrics([parallelism])
-
-
+        if self.enable_visualizer:
+            self.datasource.send_metrics([application_progress_error])
+            self.datasource.send_metrics([job_progress_error])
+            self.datasource.send_metrics([time_progress_error])
+            self.datasource.send_metrics([parallelism])
+            
         time.sleep(MONITORING_INTERVAL)
 
     def _get_num_replicas(self):
