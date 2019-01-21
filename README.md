@@ -43,6 +43,16 @@ Or using tox command:
 $ tox -e venv -- monitor
 ```
 
+### Run Unit Tests
+ In order to execute a unit test of a specific class run the following command:
+ ```
+$ pytest monitor/test/unit/plugins/kubejobs/test_class.py
+```
+ Or run all test cases using tox command:
+ ```
+$ tox
+```
+
 ## Monitor REST API
 Endpoints are avaliable on [restapi-endpoints.md](https://github.com/bigsea-ufcg/bigsea-monitor/tree/master/docs/restapi-endpoints.md) documentation.
 

@@ -1,6 +1,7 @@
 Flask
 pytz
 requests
+requests_mock
 tzlocal
 python-monascaclient==1.5.0
 python-keystoneclient
