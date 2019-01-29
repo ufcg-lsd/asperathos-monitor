@@ -12,7 +12,7 @@ This section provides a detailed list of avaliable endpoints in Monitor REST API
 	  {
 	     plugin: [string],
 	     plugin_info : {
-	         ...
+	         [...]
 	     }
 	  }
 	  ```

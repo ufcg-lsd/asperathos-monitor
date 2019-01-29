@@ -37,6 +37,7 @@ class KubeJobProgress(Plugin):
     def __init__(self, app_id, info_plugin, collect_period=2, retries=10):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
+        kubernetes.config.load_kube_config()
 
         self.enable_visualizer = info_plugin['enable_visualizer']
         self.submission_url = info_plugin['count_jobs_url']
@@ -50,6 +51,7 @@ class KubeJobProgress(Plugin):
                                      port=info_plugin['redis_port'])
         self.metric_queue = "%s:metrics" % self.app_id
         self.current_job_id = 0
+        self.b_v1 = kubernetes.client.BatchV1Api()
 
         if self.enable_visualizer:
             datasource_type = info_plugin['datasource_type']
@@ -127,11 +129,8 @@ class KubeJobProgress(Plugin):
         time.sleep(MONITORING_INTERVAL)
 
     def _get_num_replicas(self):
-        kubernetes.config.load_kube_config()
-
-        b_v1 = kubernetes.client.BatchV1Api()
-
-        job = b_v1.read_namespaced_job(name = self.app_id, namespace="default")
+        
+        job = self.b_v1.read_namespaced_job(name = self.app_id, namespace="default")
         return job.status.active
 
     def _get_elapsed_time(self):
@@ -147,8 +146,10 @@ class KubeJobProgress(Plugin):
                                                                           self.app_id))
             job_processing = requests.get('http://%s/redis-%s/job:processing/count' % (self.submission_url,
                                                                           self.app_id))
+                                                                          
             job_progress = self.number_of_jobs - (int(job_request.json()) + int(job_processing.json()))
             self._publish_measurement(jobs_completed=job_progress)
+            return job_progress
 
         except Exception as ex:
             print ("Error: No application found for %s. %s remaining attempts"

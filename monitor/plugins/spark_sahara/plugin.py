@@ -23,6 +23,7 @@ from monitor.utils.monasca.connector import MonascaConnector
 from monitor.plugins.base import Plugin
 from monitor.utils.logger import Log, configure_logging
 
+
 LOG_FILE = "progress.log"
 TIME_PROGRESS_FILE = "time_progress.log"
 MONITORING_INTERVAL = 1
@@ -32,12 +33,15 @@ configure_logging()
 
 class SparkProgress(Plugin):
 
-    def __init__(self, app_id, info_plugin, collect_period=2, retries=60):
+    def __init__(self, app_id, info_plugin, collect_period=2, retries=60, monasca_conn="monasca"):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
-
-        self.monasca = MonascaConnector()
-
+        
+        if monasca_conn == "monasca":
+            self.monasca = MonascaConnector()
+        else:
+            self.monasca = monasca_conn
+            
         self.submission_url = info_plugin['spark_submisson_url']
         self.expected_time = info_plugin['expected_time']
 

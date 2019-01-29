@@ -46,7 +46,7 @@ class MonitorBuilder:
         elif plugin == "kubejobs":
             executor = KubeJobProgress(app_id, plugin_info, retries=api.retries)
 
-        elif plugin == "vertical":
+        elif plugin == "external_api":
             plugin_info['threshold'] = api.threshold
             plugin_info['metric_source'] = api.metric_source
             plugin_info['get_metric_endpoint'] = api.get_metric_endpoint
