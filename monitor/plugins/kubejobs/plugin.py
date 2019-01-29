@@ -35,6 +35,7 @@ class KubeJobProgress(Plugin):
     def __init__(self, app_id, info_plugin, collect_period=2, retries=10):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
+        kubernetes.config.load_kube_config()
 
         self.enable_monasca = info_plugin['graphic_metrics']
         if self.enable_monasca:
@@ -50,6 +51,7 @@ class KubeJobProgress(Plugin):
                                      port=info_plugin['redis_port'])
         self.metric_queue = "%s:metrics" % self.app_id
         self.current_job_id = 0
+        self.b_v1 = kubernetes.client.BatchV1Api()
 
     def _publish_measurement(self, jobs_completed):
 
@@ -106,7 +108,7 @@ class KubeJobProgress(Plugin):
         print "Error: %s " % application_progress_error['value']
 
         self.rds.rpush(self.metric_queue,
-                       application_progress_error)
+                       str(application_progress_error))
 
         if self.enable_monasca:
             self.monasca.send_metrics([application_progress_error])
@@ -118,11 +120,8 @@ class KubeJobProgress(Plugin):
         time.sleep(MONITORING_INTERVAL)
 
     def _get_num_replicas(self):
-        kubernetes.config.load_kube_config()
-
-        b_v1 = kubernetes.client.BatchV1Api()
-
-        job = b_v1.read_namespaced_job(name = self.app_id, namespace="default")
+        
+        job = self.b_v1.read_namespaced_job(name = self.app_id, namespace="default")
         return job.status.active
 
     def _get_elapsed_time(self):
@@ -138,8 +137,10 @@ class KubeJobProgress(Plugin):
                                                                           self.app_id))
             job_processing = requests.get('http://%s/redis-%s/job:processing/count' % (self.submission_url,
                                                                           self.app_id))
+                                                                          
             job_progress = self.number_of_jobs - (int(job_request.json()) + int(job_processing.json()))
             self._publish_measurement(jobs_completed=job_progress)
+            return job_progress
 
         except Exception as ex:
             print ("Error: No application found for %s. %s remaining attempts"
