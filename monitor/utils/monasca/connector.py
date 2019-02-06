@@ -91,6 +91,7 @@ class MonascaConnector:
         try:
             monasca_client = self._get_monasca_client()
             monasca_client.metrics.create(**batch_metrics)
+        
         except exc.HTTPException as httpex:
             print httpex.message
         except Exception as ex:

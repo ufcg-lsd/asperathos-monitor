@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import redis
 import requests
 import time
@@ -32,13 +34,15 @@ TIME_PROGRESS_FILE = "time_progress.log"
 MONITORING_INTERVAL = 2
 
 
-class KubeJobProgress(Plugin):
+class VerticalProgress(Plugin):
 
     def __init__(self, app_id, info_plugin, collect_period=2, retries=10):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
-        kubernetes.config.load_kube_config()
-
+        self.cpu_threshold = info_plugin['threshold']
+        self.metric_source = info_plugin['metric_source']
+        self.get_metric_endpoint = info_plugin['get_metric_endpoint']
+        self.k8s_manifest = info_plugin['k8s_manifest']
         self.enable_visualizer = info_plugin['enable_visualizer']
         self.submission_url = info_plugin['count_jobs_url']
         self.expected_time = int(info_plugin['expected_time'])
@@ -51,12 +55,11 @@ class KubeJobProgress(Plugin):
                                      port=info_plugin['redis_port'])
         self.metric_queue = "%s:metrics" % self.app_id
         self.current_job_id = 0
-        self.b_v1 = kubernetes.client.BatchV1Api()
-
         if self.enable_visualizer:
             datasource_type = info_plugin['datasource_type']
             if datasource_type == "monasca":
                 self.datasource = MonascaConnector()
+            
             elif datasource_type == "influxdb":
                 influx_url = info_plugin['database_data']['url']
                 influx_port = info_plugin['database_data']['port']
@@ -64,56 +67,41 @@ class KubeJobProgress(Plugin):
                 self.datasource = InfluxConnector(influx_url, influx_port, database_name)
             else:
                 print("Unknown datasource type...!")
+        
 
-
-    def _publish_measurement(self, jobs_completed):
+    def _publish_measurement(self, cpu_usage):
 
         application_progress_error = {}
-        job_progress_error = {}
-        time_progress_error = {}
-        parallelism = {}
-
-        # Init
-        print "Jobs Completed: %i" % jobs_completed
-
-        # Job Progress
-
-        job_progress = min(1.0, (float(jobs_completed) / self.number_of_jobs))
-        # Elapsed Time
-        elapsed_time = float(self._get_elapsed_time())
+        cpu_usage_metric = {}
+        cpu_quota_metric = {}
 
         # Reference Value
-        ref_value = (elapsed_time / self.expected_time)
-        replicas = self._get_num_replicas()
+        ref_value = float(self.cpu_threshold)
+        
         # Error
-        print "Job progress: %s\Time Progress: %s\nReplicas: %s" \
-                        "\n========================" \
-                        % (job_progress, ref_value, replicas)
+        
+        print("CPU_USAGE: " + str(cpu_usage))
+        print("REF_VALUE: " + str(ref_value))
 
-        error = job_progress - ref_value
+        error = (float(cpu_usage)/100) - ref_value
 
         application_progress_error['name'] = ('application-progress'
                                               '.error')
-
         application_progress_error['value'] = error
         application_progress_error['timestamp'] = time.time() * 1000
         application_progress_error['dimensions'] = self.dimensions
 
-        job_progress_error['name'] = 'job-progress'
-        job_progress_error['value'] = job_progress
-        job_progress_error['timestamp'] = time.time() * 1000
-        job_progress_error['dimensions'] = self.dimensions
+        cpu_usage_metric['name'] = 'cpu-usage'
+        cpu_usage_metric['value'] = float(cpu_usage)
+        cpu_usage_metric['timestamp'] = time.time() * 1000
+        cpu_usage_metric['dimensions'] = self.dimensions
 
-        time_progress_error['name'] = 'time-progress'
-        time_progress_error['value'] = ref_value
-        time_progress_error['timestamp'] = time.time() * 1000
-        time_progress_error['dimensions'] = self.dimensions
+        cpu_quota = self.get_cpu_quota()
 
-        parallelism['name'] = "job-parallelism"
-        parallelism['value'] = replicas
-        parallelism['timestamp'] = time.time() * 1000
-        parallelism['dimensions'] = self.dimensions
-
+        cpu_quota_metric['name'] = 'cpu-quota'
+        cpu_quota_metric['value'] = float(cpu_quota)
+        cpu_quota_metric['timestamp'] = time.time() * 1000
+        cpu_quota_metric['dimensions'] = self.dimensions
 
         print "Error: %s " % application_progress_error['value']
 
@@ -122,16 +110,10 @@ class KubeJobProgress(Plugin):
 
         if self.enable_visualizer:
             self.datasource.send_metrics([application_progress_error])
-            self.datasource.send_metrics([job_progress_error])
-            self.datasource.send_metrics([time_progress_error])
-            self.datasource.send_metrics([parallelism])
-
+            self.datasource.send_metrics([cpu_usage_metric])
+            self.datasource.send_metrics([cpu_quota_metric])
+            
         time.sleep(MONITORING_INTERVAL)
-
-    def _get_num_replicas(self):
-        
-        job = self.b_v1.read_namespaced_job(name = self.app_id, namespace="default")
-        return job.status.active
 
     def _get_elapsed_time(self):
         datetime_now = datetime.now()
@@ -142,14 +124,11 @@ class KubeJobProgress(Plugin):
 
     def monitoring_application(self):
         try:
-            job_request = requests.get('http://%s/redis-%s/job/count' % (self.submission_url,
-                                                                          self.app_id))
-            job_processing = requests.get('http://%s/redis-%s/job:processing/count' % (self.submission_url,
-                                                                          self.app_id))
-                                                                          
-            job_progress = self.number_of_jobs - (int(job_request.json()) + int(job_processing.json()))
-            self._publish_measurement(jobs_completed=job_progress)
-            return job_progress
+            cpu_usage = requests.get('http://%s:5000' % (self.get_api_address())).text
+            
+            print("Publishing metric %s value %s: " % (self.metric_source, cpu_usage))
+
+            self._publish_measurement(cpu_usage=cpu_usage)
 
         except Exception as ex:
             print ("Error: No application found for %s. %s remaining attempts"
@@ -157,3 +136,21 @@ class KubeJobProgress(Plugin):
 
             print ex.message
             raise
+
+    def get_cpu_quota(self):
+        try:
+            cpu_quota = requests.get('http://%s:5000/%s' % (self.get_api_address(), self.get_metric_endpoint)).text
+            return cpu_quota
+
+        except Exception as ex:
+            print("Error while getting %s metric" % (self.metric_source))
+            print ex.message
+            raise
+
+    def get_api_address(self):
+        # TODO Search a better way to get the internal ip of a node using k8s api
+        nodes_ips = os.popen("kubectl --kubeconfig=%s get nodes -o wide | awk '{print $6}'" % (self.k8s_manifest)).readlines()
+        api_address = nodes_ips.pop(1).replace('\n','')
+
+        return api_address
+        

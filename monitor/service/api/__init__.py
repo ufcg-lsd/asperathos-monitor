@@ -30,7 +30,6 @@ try:
     use_debug = config.get('general', 'debug')
     retries = config.getint('general', 'retries')
 
-
     """ Validate if really exists a section to listed plugins """
     for plugin in plugins:
         if plugin != '' and plugin not in config.sections():
@@ -43,6 +42,12 @@ try:
         mesos_cluster_addr = config.get('spark_mesos', 'mesos_cluster_addr')
         mesos_password = config.get('spark_mesos', 'mesos_password')
         mesos_username = config.get('spark_mesos', 'mesos_username')
+
+    if 'external_api' in plugins:
+        metric_source = config.get('external_api', 'metric_source')
+        get_metric_endpoint = config.get('external_api', 'get_metric_endpoint')
+        threshold = config.get('external_api', 'threshold')
+        k8s_manifest = config.get('external_api', 'k8s_manifest')
     
     """ Monasca parameters """
     monasca_endpoint = config.get('monasca', 'monasca_endpoint')
