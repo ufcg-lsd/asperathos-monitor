@@ -37,8 +37,6 @@ class KubeJobProgress(Plugin):
     def __init__(self, app_id, info_plugin, collect_period=2, retries=10):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
-        kubernetes.config.load_kube_config()
-
         self.enable_visualizer = info_plugin['enable_visualizer']
         self.submission_url = info_plugin['count_jobs_url']
         self.expected_time = int(info_plugin['expected_time'])
@@ -51,6 +49,8 @@ class KubeJobProgress(Plugin):
                                      port=info_plugin['redis_port'])
         self.metric_queue = "%s:metrics" % self.app_id
         self.current_job_id = 0
+        
+        kubernetes.config.load_kube_config()
         self.b_v1 = kubernetes.client.BatchV1Api()
 
         if self.enable_visualizer:
@@ -129,10 +129,9 @@ class KubeJobProgress(Plugin):
         time.sleep(MONITORING_INTERVAL)
 
     def _get_num_replicas(self):
-        
-        job = self.b_v1.read_namespaced_job(name = self.app_id, namespace="default")
+        job = self.b_v1.read_namespaced_job(name=self.app_id, namespace="default")
         return job.status.active
-
+        
     def _get_elapsed_time(self):
         datetime_now = datetime.now()
         elapsed_time = datetime_now - self.submission_time
