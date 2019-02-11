@@ -9,3 +9,5 @@ paramiko
 redis
 kubernetes
 influxdb
+mock
+pytest
