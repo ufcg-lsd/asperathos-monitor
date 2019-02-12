@@ -21,7 +21,7 @@ import sys
 try:
     # Conf reading
     config = ConfigParser.RawConfigParser()
-    config.read('./monitor.cfg')
+    config.read('./etc/monitor.cfg')
     
     """ General configuration """
     address = config.get('general', 'host')
