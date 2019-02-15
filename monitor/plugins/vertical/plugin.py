@@ -148,9 +148,12 @@ class VerticalProgress(Plugin):
             raise
 
     def get_api_address(self):
-        # TODO Search a better way to get the internal ip of a node using k8s api
-        nodes_ips = os.popen("kubectl --kubeconfig=%s get nodes -o wide | awk '{print $6}'" % (self.k8s_manifest)).readlines()
-        api_address = nodes_ips.pop(1).replace('\n','')
+
+        kube.config.load_kube_config(self.k8s_manifest)
+        CoreV1Api = kube.client.CoreV1Api()
+
+        node_info = CoreV1Api.list_node().items[0]
+        api_address = node_info.status.addresses[0].address
 
         return api_address
         
