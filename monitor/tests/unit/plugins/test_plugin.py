@@ -13,17 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime
 import unittest
+
 from mock import patch
-import requests_mock
 from monitor.tests.mocks.mock_redis import MockRedis
 from monitor.tests.mocks.mock_k8s import MockKube
 from monitor.tests.mocks.mock_monasca import MockMonascaConnector
 from monitor.tests.mocks.mock_influx import MockInfluxConnector
-
-from datetime import datetime
-
-
 from monitor.plugins.kubejobs.plugin import KubeJobProgress
 
 
@@ -161,15 +158,13 @@ class TestKubeJobs(unittest.TestCase):
         plugin.b_v1 = MockKube(plugin.app_id)
         plugin.datasource = MockInfluxConnector()
 
-        with requests_mock.Mocker() as m:
+        for i in range(5):
+            plugin.rds.rpush('job', 'job')
+        
+        for i in range(10):
+            plugin.rds.rpush('job:processing', 'job')
 
-            m.get('http://%s/redis-%s/job/count' % (plugin.submission_url,
-                                             plugin.app_id), text='500')
-
-            m.get('http://%s/redis-%s/job:processing/count' % (plugin.submission_url,
-                                             plugin.app_id), text='750')
-
-            self.assertEqual(plugin.monitoring_application(), 250)
+        self.assertEqual(plugin.monitoring_application(), 1485)
     
     @patch('kubernetes.config.load_kube_config')
     def test_send_monasca_metrics(self, mock_config):

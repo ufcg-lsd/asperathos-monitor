@@ -63,3 +63,15 @@ class MockRedis():
     """
     def delete(self, queue_name):
         self.map.pop(queue_name)
+    
+    """ Function the simulates getting the length of a
+        redis queue
+    Args:
+        queue_name (string): Representing the name of the queue to
+                             be get.
+    Returns:
+        Int: Represents the length of the queue
+    """
+    def llen(self, queue_name):
+        queue = self.map.get(queue_name)
+        return len(queue) if queue else 0
