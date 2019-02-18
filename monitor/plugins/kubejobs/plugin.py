@@ -130,10 +130,9 @@ class KubeJobProgress(Plugin):
         time.sleep(MONITORING_INTERVAL)
 
     def _get_num_replicas(self):
-        
         job = self.b_v1.read_namespaced_job(name=self.app_id, namespace="default")
         return job.status.active
-
+        
     
     def _get_elapsed_time(self):
         datetime_now = datetime.now()

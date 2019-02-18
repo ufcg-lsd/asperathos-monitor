@@ -54,7 +54,7 @@ class TestKubeJobs(unittest.TestCase):
 
     def tearDown(self):
         pass
-
+        
     @patch('kubernetes.config.load_kube_config')
     def test_init_kubejobs(self, mock_config):
         """
@@ -81,7 +81,7 @@ class TestKubeJobs(unittest.TestCase):
         self.assertEqual(plugin2.attempts, 10)
 
         self.assertFalse(plugin == plugin2)
-
+    
     @patch('kubernetes.config.load_kube_config')
     def test_get_num_replicas(self, mock_config):
         """
@@ -121,7 +121,7 @@ class TestKubeJobs(unittest.TestCase):
         plugin._publish_measurement(500)
         self.assertTrue(plugin.rds.rpop(plugin.metric_queue) != None)
         self.assertTrue(plugin.rds.rpop(plugin.metric_queue) == None)
-
+        
         plugin._publish_measurement(600)
         self.assertTrue(plugin.rds.rpop(plugin.metric_queue) != None)
         self.assertTrue(plugin.rds.rpop(plugin.metric_queue) == None)
@@ -135,13 +135,13 @@ class TestKubeJobs(unittest.TestCase):
         Returns: None
         """
         mock_config.return_value = None
-
+        
         plugin = KubeJobProgress(self.app_id, self.info_plugin,
                                  self.collect_period, self.retries)
 
         datetime_now = datetime.now()
         elapsed_time = datetime_now - plugin.submission_time
-
+                        
         self.assertEqual(elapsed_time.seconds, plugin._get_elapsed_time())
 
     @patch('kubernetes.config.load_kube_config')
@@ -170,7 +170,7 @@ class TestKubeJobs(unittest.TestCase):
                                              plugin.app_id), text='750')
 
             self.assertEqual(plugin.monitoring_application(), 250)
-
+    
     @patch('kubernetes.config.load_kube_config')
     def test_send_monasca_metrics(self, mock_config):
         """
