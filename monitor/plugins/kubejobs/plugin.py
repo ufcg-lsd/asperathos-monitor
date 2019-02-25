@@ -35,7 +35,6 @@ class KubeJobProgress(Plugin):
                         collect_period, retries=retries)
 
         self.enable_visualizer = info_plugin['enable_visualizer']
-        self.submission_url = info_plugin['count_jobs_url']
         self.expected_time = int(info_plugin['expected_time'])
         self.number_of_jobs = int(info_plugin['number_of_jobs'])
         self.submission_time = datetime.strptime(info_plugin['submission_time'],
