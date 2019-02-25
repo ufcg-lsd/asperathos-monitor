@@ -47,7 +47,7 @@ class KubeJobProgress(Plugin):
         self.metric_queue = "%s:metrics" % self.app_id
         self.current_job_id = 0
 
-        kubernetes.config.load_kube_config()
+        kubernetes.config.load_kube_config(api.k8s_manifest)
         self.b_v1 = kubernetes.client.BatchV1Api()
 
         if self.enable_visualizer:
