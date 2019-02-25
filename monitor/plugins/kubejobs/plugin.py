@@ -19,6 +19,7 @@ import time
 from datetime import datetime
 from monitor.utils.monasca.connector import MonascaConnector
 from monitor.utils.influxdb.connector import InfluxConnector
+from monitor.service import api
 from monitor.plugins.base import Plugin
 
 import kubernetes
