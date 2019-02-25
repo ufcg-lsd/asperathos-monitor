@@ -14,16 +14,12 @@
 # limitations under the License.
 
 import redis
-import requests
 import time
-import subprocess
-from subprocess import PIPE
 
 from datetime import datetime
 from monitor.utils.monasca.connector import MonascaConnector
 from monitor.utils.influxdb.connector import InfluxConnector
 from monitor.plugins.base import Plugin
-from influxdb import InfluxDBClient
 
 import kubernetes
 
@@ -143,12 +139,10 @@ class KubeJobProgress(Plugin):
 
     def monitoring_application(self):
         try:
-            job_request = requests.get('http://%s/redis-%s/job/count' % (self.submission_url,
-                                                                          self.app_id))
-            job_processing = requests.get('http://%s/redis-%s/job:processing/count' % (self.submission_url,
-                                                                          self.app_id))
-                                                                          
-            job_progress = self.number_of_jobs - (int(job_request.json()) + int(job_processing.json()))
+            num_queued_jobs = self.rds.llen('job')
+            num_processing_jobs = self.rds.llen('job:processing')
+             
+            job_progress = self.number_of_jobs - (num_queued_jobs + num_processing_jobs)
             self._publish_measurement(jobs_completed=job_progress)
             return job_progress
 
