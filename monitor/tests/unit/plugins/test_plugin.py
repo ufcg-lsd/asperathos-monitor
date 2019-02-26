@@ -26,7 +26,6 @@ from monitor.plugins.kubejobs.plugin import KubeJobProgress
 
 class TestKubeJobs(unittest.TestCase):
 
-        
     def setUp(self):
         """
         Set up variables that KubeJobs plugin needs

@@ -17,6 +17,7 @@ import ConfigParser
 import os
 import sys
 
+CONFIG_PATH = "./data/conf"
 
 try:
     # Conf reading
@@ -44,10 +45,18 @@ try:
         mesos_username = config.get('spark_mesos', 'mesos_username')
 
     if 'external_api' in plugins:
+
+        # Setting default value
+        k8s_manifest = CONFIG_PATH
+
+        # If explicitly stated in the cfg file, overwrite the variable
+        if(config.has_section('external_api')):
+            if(config.has_option('external_api', 'k8s_manifest')):
+                k8s_manifest = config.get('external_api', 'k8s_manifest')
+
         metric_source = config.get('external_api', 'metric_source')
         get_metric_endpoint = config.get('external_api', 'get_metric_endpoint')
         threshold = config.get('external_api', 'threshold')
-        k8s_manifest = config.get('external_api', 'k8s_manifest')
     
     """ Monasca parameters """
     monasca_endpoint = config.get('monasca', 'monasca_endpoint')

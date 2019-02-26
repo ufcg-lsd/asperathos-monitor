@@ -6,3 +6,5 @@
 .*.swp
 bigsea_key
 *.egg-info/
+data/conf
+data/clusters
