@@ -17,6 +17,7 @@ import ConfigParser
 import os
 import sys
 
+CONFIG_PATH = "./data/conf"
 
 try:
     # Conf reading
@@ -46,7 +47,7 @@ try:
     if 'external_api' in plugins:
 
         # Setting default value
-        k8s_manifest = "./data/conf"
+        k8s_manifest = CONFIG_PATH
 
         # If explicitly stated in the cfg file, overwrite the variable
         if(config.has_section('external_api')):

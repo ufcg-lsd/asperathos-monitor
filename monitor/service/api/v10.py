@@ -15,8 +15,6 @@
 
 import ConfigParser
 import os
-import filecmp
-import shutil
 import sys
 
 from monitor.service import api
