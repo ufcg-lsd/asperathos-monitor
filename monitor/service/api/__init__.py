@@ -16,6 +16,11 @@
 import ConfigParser
 import os
 import sys
+from monitor.utils.logger import Log
+
+LOG_FILE = "progress.log"
+LOG_NAME = "kubejobs-progress"
+LOG = Log(LOG_NAME, LOG_FILE)
 
 CONFIG_PATH = "./data/conf"
 
@@ -67,5 +72,5 @@ try:
     monasca_api_version = config.get('monasca', 'api_version')
 
 except Exception as e:
-    print "Error: %s" % e.message
+    LOG.log("Error: %s" % e.message)
     quit()

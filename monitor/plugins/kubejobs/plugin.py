@@ -21,20 +21,21 @@ from monitor.utils.monasca.connector import MonascaConnector
 from monitor.utils.influxdb.connector import InfluxConnector
 from monitor.service import api
 from monitor.plugins.base import Plugin
+from monitor.utils.logger import Log
 
 import kubernetes
 
 LOG_FILE = "progress.log"
-TIME_PROGRESS_FILE = "time_progress.log"
-MONITORING_INTERVAL = 2
+LOG_NAME = "kubejobs-progress"
 
+MONITORING_INTERVAL = 2
 
 class KubeJobProgress(Plugin):
 
     def __init__(self, app_id, info_plugin, collect_period=2, retries=10):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
-
+        self.LOG = Log(LOG_NAME, LOG_FILE)
         self.enable_visualizer = info_plugin['enable_visualizer']
         self.expected_time = int(info_plugin['expected_time'])
         self.number_of_jobs = int(info_plugin['number_of_jobs'])
@@ -60,7 +61,7 @@ class KubeJobProgress(Plugin):
                 database_name = info_plugin['database_data']['name']
                 self.datasource = InfluxConnector(influx_url, influx_port, database_name)
             else:
-                print("Unknown datasource type...!")
+                self.LOG.log("Unknown datasource type...!")
 
 
     def _publish_measurement(self, jobs_completed):
@@ -71,7 +72,7 @@ class KubeJobProgress(Plugin):
         parallelism = {}
 
         # Init
-        print "Jobs Completed: %i" % jobs_completed
+        self.LOG.log("Jobs Completed: %i" % jobs_completed)
 
         # Job Progress
 
@@ -83,9 +84,9 @@ class KubeJobProgress(Plugin):
         ref_value = (elapsed_time / self.expected_time)
         replicas = self._get_num_replicas()
         # Error
-        print "Job progress: %s\Time Progress: %s\nReplicas: %s" \
+        self.LOG.log("Job progress: %s\Time Progress: %s\nReplicas: %s" \
                         "\n========================" \
-                        % (job_progress, ref_value, replicas)
+                        % (job_progress, ref_value, replicas))
 
         error = job_progress - ref_value
 
@@ -112,7 +113,7 @@ class KubeJobProgress(Plugin):
         parallelism['dimensions'] = self.dimensions
 
 
-        print "Error: %s " % application_progress_error['value']
+        self.LOG.log("Error: %s " % application_progress_error['value'])
 
         self.rds.rpush(self.metric_queue,
                        str(application_progress_error))
@@ -133,7 +134,7 @@ class KubeJobProgress(Plugin):
     def _get_elapsed_time(self):
         datetime_now = datetime.now()
         elapsed_time = datetime_now - self.submission_time
-        print "Elapsed Time: %.2f" % elapsed_time.seconds
+        self.LOG.log("Elapsed Time: %.2f" % elapsed_time.seconds)
 
         return elapsed_time.seconds
 
@@ -147,8 +148,8 @@ class KubeJobProgress(Plugin):
             return job_progress
 
         except Exception as ex:
-            print ("Error: No application found for %s. %s remaining attempts"
+            self.LOG.log(("Error: No application found for %s. %s remaining attempts")
                    % (self.app_id, self.attempts))
 
-            print ex.message
+            self.LOG.log(ex.message)
             raise
