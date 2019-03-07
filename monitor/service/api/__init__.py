@@ -44,6 +44,16 @@ try:
         mesos_password = config.get('spark_mesos', 'mesos_password')
         mesos_username = config.get('spark_mesos', 'mesos_username')
 
+    if 'kubejobs' in  plugins:
+
+        # Setting default value
+        k8s_manifest = CONFIG_PATH
+
+        # If explicitly stated in the cfg file, overwrite the variable
+        if(config.has_section('kubejobs')):
+            if(config.has_option('kubejobs', 'k8s_manifest')):
+                k8s_manifest = config.get('kubejobs', 'k8s_manifest')
+
     if 'external_api' in plugins:
 
         # Setting default value
