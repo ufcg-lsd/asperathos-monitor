@@ -27,16 +27,19 @@ class TestManager(unittest.TestCase):
 
     def tearDown(self):
         pass
-        
+
     @unittest.skip
     @mock.patch('ConfigParser.RawConfigParser')
-    @mock.patch('monitor.utils.monasca.connector.MonascaConnector._get_monasca_client')
+    @mock.patch(
+        'monitor.utils.monasca.connector.MonascaConnector._get_monasca_client')
     def test_init_manager(self, config_mock, monasca_mock):
         MonascaConnector()
         config_mock.assert_called_once_with()
         monasca_mock.assert_called_once_with()
+
     @unittest.skip
-    @mock.patch('monitor.utils.monasca.connector.MonascaConnector._get_monasca_client')
+    @mock.patch(
+        'monitor.utils.monasca.connector.MonascaConnector._get_monasca_client')
     def test_get_measurements(self, monasca_mock):
         ConfigParser.RawConfigParser = mock.Mock()
         m = MonascaConnector()

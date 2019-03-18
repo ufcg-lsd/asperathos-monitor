@@ -14,8 +14,6 @@
 # limitations under the License.
 
 import ConfigParser
-import os
-import sys
 from monitor.utils.logger import Log
 
 LOG_FILE = "progress.log"
@@ -28,7 +26,7 @@ try:
     # Conf reading
     config = ConfigParser.RawConfigParser()
     config.read('./monitor.cfg')
-    
+
     """ General configuration """
     address = config.get('general', 'host')
     port = config.getint('general', 'port')
@@ -40,16 +38,16 @@ try:
     for plugin in plugins:
         if plugin != '' and plugin not in config.sections():
             raise Exception("plugin '%s' section missing" % plugin)
-    
+
     if 'openstack_generic' in plugins:
         os_keypair = config.get('openstack_generic', 'key_pair')
-    
+
     if 'spark_mesos' in plugins:
         mesos_cluster_addr = config.get('spark_mesos', 'mesos_cluster_addr')
         mesos_password = config.get('spark_mesos', 'mesos_password')
         mesos_username = config.get('spark_mesos', 'mesos_username')
 
-    if 'kubejobs' in  plugins:
+    if 'kubejobs' in plugins:
 
         # Setting default value
         k8s_manifest = CONFIG_PATH
@@ -72,7 +70,7 @@ try:
         metric_source = config.get('external_api', 'metric_source')
         get_metric_endpoint = config.get('external_api', 'get_metric_endpoint')
         threshold = config.get('external_api', 'threshold')
-    
+
     """ Monasca parameters """
     monasca_endpoint = config.get('monasca', 'monasca_endpoint')
     monasca_username = config.get('monasca', 'username')

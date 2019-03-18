@@ -16,13 +16,16 @@
 """
 Class that define a InfluxConnector simulation.
 """
+
+
 class MockInfluxConnector():
 
     """ Constructor of the mock of a InfluxConnector object
-    
+
     Returns:
         MockRedis: The simulation of a redis object
     """
+
     def __init__(self):
 
         self.metrics = {}
@@ -33,12 +36,13 @@ class MockInfluxConnector():
     Args:
         metrics(Objects): Object that must be send to influx.
     """
+
     def send_metrics(self, metrics):
 
         try:
             self.metrics[metrics[0]['name']].append(metrics)
 
-        except Exception as ex:
+        except Exception:
 
             self.metrics[metrics[0]['name']] = []
             self.metrics[metrics[0]['name']].append(metrics)

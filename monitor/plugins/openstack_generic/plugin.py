@@ -40,6 +40,7 @@ class OSGeneric(Plugin):
 
     """ This method extracts the value information from a log line
         that contains the measurement for the interest metric """
+
     def _get_metric_value(self, log):
         value = None
         for i in range(len(log) - 1, 0, -1):
@@ -56,6 +57,7 @@ class OSGeneric(Plugin):
         the log will be captured. It is possible to execute a command
         in the host using the function c.exec_command("write_command_here")
         with the object returned here """
+
     def _get_ssh_connection(self):
         keypair = paramiko.RSAKey.from_private_key_file(self.keypair_path)
         conn = paramiko.SSHClient()
@@ -67,6 +69,7 @@ class OSGeneric(Plugin):
 
     """ This is an auxiliary function to prepare and publish the metric.
         The point is to keep monitoring_application as simple as possible. """
+
     def _publish_metrics(self, last_log):
         metric = {}
         print last_log
@@ -92,7 +95,7 @@ class OSGeneric(Plugin):
             metric['timestamp'] = time.time() * 1000
             metric['dimensions'] = self.dimensions
 
-            time_progress_metric = {} 
+            time_progress_metric = {}
             time_progress_metric['name'] = 'application-progress.time_progress'
             time_progress_metric['value'] = ref_value
             time_progress_metric['timestamp'] = time.time() * 1000
@@ -122,8 +125,8 @@ class OSGeneric(Plugin):
             """ The second step consists in execute the command to capture
                 the last log line from the log file using the connection
                 create below and saving the outputs. """
-            stdin , stdout, stderr = conn.exec_command(
-                                         "sudo tail -1 %s" % self.log_path)
+            stdin, stdout, stderr = conn.exec_command(
+                "sudo tail -1 %s" % self.log_path)
 
             # The last step is to actually publish using the captured log line
             self._publish_metrics(stdout.read())

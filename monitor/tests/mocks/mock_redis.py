@@ -16,12 +16,15 @@
 """
 Class that represents a mock of the redis object
 """
+
+
 class MockRedis():
 
     """ Constructor of the mock of a redis object
     Returns:
         MockRedis: The simulation of a redis object
     """
+
     def __init__(self):
         self.map = {}
 
@@ -34,12 +37,13 @@ class MockRedis():
     Returns:
         None
     """
+
     def rpush(self, metric_queue, metric):
-        if self.map.get(metric_queue) == None:
+        if self.map.get(metric_queue) is None:
             self.map[metric_queue] = []
-        
+
         self.map[metric_queue].append(metric)
-    
+
     """ Function the simulates the pop of a job from the
         redis queue
     Args:
@@ -47,11 +51,12 @@ class MockRedis():
     Returns:
         Object: Representing the metric pop from the queue
     """
-    def rpop(self, metric_queue):    
+
+    def rpop(self, metric_queue):
         try:
             return self.map.get(metric_queue).pop(0)
         except Exception as e:
-            print e 
+            print e
 
     """ Function the simulates the deletion of a
         redis queue
@@ -61,9 +66,10 @@ class MockRedis():
     Returns:
         None
     """
+
     def delete(self, queue_name):
         self.map.pop(queue_name)
-    
+
     """ Function the simulates getting the length of a
         redis queue
     Args:
@@ -72,6 +78,7 @@ class MockRedis():
     Returns:
         Int: Represents the length of the queue
     """
+
     def llen(self, queue_name):
         queue = self.map.get(queue_name)
         return len(queue) if queue else 0

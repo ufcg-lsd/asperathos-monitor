@@ -11,3 +11,4 @@ kubernetes
 influxdb
 mock
 pytest
+flake8

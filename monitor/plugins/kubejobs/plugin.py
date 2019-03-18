@@ -30,6 +30,7 @@ LOG_NAME = "kubejobs-progress"
 
 MONITORING_INTERVAL = 2
 
+
 class KubeJobProgress(Plugin):
 
     def __init__(self, app_id, info_plugin, collect_period=2, retries=10):
@@ -39,8 +40,9 @@ class KubeJobProgress(Plugin):
         self.enable_visualizer = info_plugin['enable_visualizer']
         self.expected_time = int(info_plugin['expected_time'])
         self.number_of_jobs = int(info_plugin['number_of_jobs'])
-        self.submission_time = datetime.strptime(info_plugin['submission_time'],
-                                                 '%Y-%m-%dT%H:%M:%S.%fGMT')
+        self.submission_time = datetime.\
+            strptime(info_plugin['submission_time'],
+                     '%Y-%m-%dT%H:%M:%S.%fGMT')
         self.dimensions = {'application_id': self.app_id,
                            'service': 'kubejobs'}
         self.rds = redis.StrictRedis(host=info_plugin['redis_ip'],
@@ -59,10 +61,10 @@ class KubeJobProgress(Plugin):
                 influx_url = info_plugin['database_data']['url']
                 influx_port = info_plugin['database_data']['port']
                 database_name = info_plugin['database_data']['name']
-                self.datasource = InfluxConnector(influx_url, influx_port, database_name)
+                self.datasource = InfluxConnector(
+                    influx_url, influx_port, database_name)
             else:
                 self.LOG.log("Unknown datasource type...!")
-
 
     def _publish_measurement(self, jobs_completed):
 
@@ -84,9 +86,9 @@ class KubeJobProgress(Plugin):
         ref_value = (elapsed_time / self.expected_time)
         replicas = self._get_num_replicas()
         # Error
-        self.LOG.log("Job progress: %s\Time Progress: %s\nReplicas: %s" \
-                        "\n========================" \
-                        % (job_progress, ref_value, replicas))
+        self.LOG.log("Job progress: %s\nTime Progress: %s\nReplicas: %s"
+                     "\n========================"
+                     % (job_progress, ref_value, replicas))
 
         error = job_progress - ref_value
 
@@ -112,7 +114,6 @@ class KubeJobProgress(Plugin):
         parallelism['timestamp'] = time.time() * 1000
         parallelism['dimensions'] = self.dimensions
 
-
         self.LOG.log("Error: %s " % application_progress_error['value'])
 
         self.rds.rpush(self.metric_queue,
@@ -127,10 +128,10 @@ class KubeJobProgress(Plugin):
         time.sleep(MONITORING_INTERVAL)
 
     def _get_num_replicas(self):
-        job = self.b_v1.read_namespaced_job(name=self.app_id, namespace="default")
+        job = self.b_v1.read_namespaced_job(
+            name=self.app_id, namespace="default")
         return job.status.active
-        
-    
+
     def _get_elapsed_time(self):
         datetime_now = datetime.now()
         elapsed_time = datetime_now - self.submission_time
@@ -142,14 +143,16 @@ class KubeJobProgress(Plugin):
         try:
             num_queued_jobs = self.rds.llen('job')
             num_processing_jobs = self.rds.llen('job:processing')
-             
-            job_progress = self.number_of_jobs - (num_queued_jobs + num_processing_jobs)
+
+            job_progress = self.number_of_jobs - \
+                (num_queued_jobs + num_processing_jobs)
             self._publish_measurement(jobs_completed=job_progress)
             return job_progress
 
         except Exception as ex:
-            self.LOG.log(("Error: No application found for %s. %s remaining attempts")
-                   % (self.app_id, self.attempts))
+            self.LOG.log(("Error: No application found for %s.\
+                 %s remaining attempts")
+                         % (self.app_id, self.attempts))
 
             self.LOG.log(ex.message)
             raise
