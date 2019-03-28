@@ -4,26 +4,33 @@ pipeline {
     stage('Unit') {
       agent any
       steps {
-        sh 'tox'
+        sh 'tox -e py27 -r'
       }
     }
     stage('Integration') {
       agent any
       steps {
-        sh 'docker network create --attachable network-monitor-$BUILD_ID'
-        sh 'docker run -t -d --privileged --network=network-monitor-$BUILD_ID -v /.kube:/.kube/ --name docker-monitor-$BUILD_ID asperathos-docker'
-        sh 'docker create --network=network-monitor-$BUILD_ID --name integration-tests-monitor-$BUILD_ID -e DOCKER_HOST=tcp://$(docker ps -aqf "name=docker-monitor-$BUILD_ID"):2375 -e DOCKER_HOST_URL=$(docker ps -aqf "name=docker-monitor-$BUILD_ID") integration-tests'
-        sh 'docker cp . integration-tests-monitor-$BUILD_ID:/integration-tests/test_env/monitor/asperathos-monitor/'
-        sh 'docker start -i integration-tests-monitor-$BUILD_ID'
+        labelledShell script: 'docker network create --attachable network-monitor-$BUILD_ID', label: "Create test network"
+        labelledShell script: 'docker run -t -d --privileged --network=network-monitor-$BUILD_ID -v /.kube:/.kube/ -v d54-data-monitor-$BUILD_ID:/demo-tests/d54 -v organon-data-monitor-$BUILD_ID:/demo-tests/organon --name docker-monitor-$BUILD_ID asperathos-docker', label: "Run Docker container"
+        labelledShell script: """docker create --network=network-monitor-$BUILD_ID -v d54-data-monitor-$BUILD_ID:/demo-tests/d54 \
+        -v organon-data-monitor-$BUILD_ID:/demo-tests/organon --name integration-tests-monitor-$BUILD_ID \
+        -e DOCKER_HOST=tcp://docker-monitor-$BUILD_ID:2375 \
+        -e DOCKER_HOST_URL=docker-monitor-$BUILD_ID \
+        -e ASPERATHOS_URL=docker-monitor-$BUILD_ID:1500/submissions \
+        -e monitor_URL=docker-monitor-$BUILD_ID:5002/visualizing  integration-tests""" , label: "Create integration tests container"
+        labelledShell script: 'docker cp . integration-tests-monitor-$BUILD_ID:/integration-tests/test_env/monitor/asperathos-monitor/', label: "Copy monitor code to container"
+        labelledShell script: 'docker start -i integration-tests-monitor-$BUILD_ID', label: "Run integration tests"
       }
     }
   }
   post {
     cleanup {
-      sh 'docker stop docker-monitor-$BUILD_ID'
-      sh 'docker rm -v docker-monitor-$BUILD_ID'
-      sh 'docker rm -v integration-tests-monitor-$BUILD_ID'
-      sh 'docker network rm network-monitor-$BUILD_ID'
+      labelledShell script: 'docker stop docker-monitor-$BUILD_ID', label: "Stop Docker container"
+      labelledShell script: 'docker rm -v docker-monitor-$BUILD_ID', label: "Remove Docker container"
+      labelledShell script: 'docker rm -v integration-tests-monitor-$BUILD_ID', label: "Remove integration tests container"
+      labelledShell script: 'docker network rm network-monitor-$BUILD_ID', label: "Remove test network"
+      labelledShell script: 'docker volume rm d54-data-monitor-$BUILD_ID', label: "Remove D5.4 volume"
+      labelledShell script: 'docker volume rm organon-data-monitor-$BUILD_ID', label: "Remove Organon volume"
     }
   }
 }
