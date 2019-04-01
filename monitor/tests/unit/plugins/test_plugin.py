@@ -50,7 +50,7 @@ class TestKubeJobs(unittest.TestCase):
 
     def tearDown(self):
         pass
-        
+
     @patch('kubernetes.config.load_kube_config')
     def test_init_kubejobs(self, mock_config):
         """
@@ -77,14 +77,14 @@ class TestKubeJobs(unittest.TestCase):
         self.assertEqual(plugin2.attempts, 10)
 
         self.assertFalse(plugin == plugin2)
-    
+
     @patch('kubernetes.config.load_kube_config')
     def test_get_num_replicas(self, mock_config):
         """
         Verify that the number of replicas returned are equal
         that number of replicas initial
         Args: (patch) -- Path of the Mock of Kubernetes config
-        Returns: None 
+        Returns: None
         """
         mock_config.return_value = None
 
@@ -115,35 +115,35 @@ class TestKubeJobs(unittest.TestCase):
         plugin.datasource = MockInfluxConnector()
 
         plugin._publish_measurement(500)
-        self.assertTrue(plugin.rds.rpop(plugin.metric_queue) != None)
-        self.assertTrue(plugin.rds.rpop(plugin.metric_queue) == None)
-        
+        self.assertTrue(plugin.rds.rpop(plugin.metric_queue) is not None)
+        self.assertTrue(plugin.rds.rpop(plugin.metric_queue) is None)
+
         plugin._publish_measurement(600)
-        self.assertTrue(plugin.rds.rpop(plugin.metric_queue) != None)
-        self.assertTrue(plugin.rds.rpop(plugin.metric_queue) == None)
+        self.assertTrue(plugin.rds.rpop(plugin.metric_queue) is not None)
+        self.assertTrue(plugin.rds.rpop(plugin.metric_queue) is None)
 
     @patch('kubernetes.config.load_kube_config')
     def test_get_elapsed_time(self, mock_config):
         """
-        Check that the elapsed time returned (in seconds) 
+        Check that the elapsed time returned (in seconds)
         is equal that elapsed time given
         Args: (patch) -- Path of the Mock of Kubernetes config
         Returns: None
         """
         mock_config.return_value = None
-        
+
         plugin = KubeJobProgress(self.app_id, self.info_plugin,
                                  self.collect_period, self.retries)
 
         datetime_now = datetime.now()
         elapsed_time = datetime_now - plugin.submission_time
-                        
+
         self.assertEqual(elapsed_time.seconds, plugin._get_elapsed_time())
 
     @patch('kubernetes.config.load_kube_config')
     def test_monitoring_application(self, mock_config):
         """
-        Check that the function monitoring_application 
+        Check that the function monitoring_application
         returns the number of jobs minus the number of
         jobs that are be processing plus number of jobs to do
         Args: (patch) -- Path of the Mock of Kubernetes config
@@ -159,12 +159,12 @@ class TestKubeJobs(unittest.TestCase):
 
         for i in range(5):
             plugin.rds.rpush('job', 'job')
-        
+
         for i in range(10):
             plugin.rds.rpush('job:processing', 'job')
 
         self.assertEqual(plugin.monitoring_application(), 1485)
-    
+
     @patch('kubernetes.config.load_kube_config')
     def test_send_monasca_metrics(self, mock_config):
         """
@@ -186,14 +186,16 @@ class TestKubeJobs(unittest.TestCase):
 
         self.assertEqual(len(plugin.datasource.metrics['time-progress']), 1)
         self.assertEqual(len(plugin.datasource.metrics['job-progress']), 1)
-        self.assertEqual(len(plugin.datasource.metrics['application-progress.error']), 1)
+        self.assertEqual(
+            len(plugin.datasource.metrics['application-progress.error']), 1)
         self.assertEqual(len(plugin.datasource.metrics['job-parallelism']), 1)
 
         plugin._publish_measurement(1000)
 
         self.assertEqual(len(plugin.datasource.metrics['time-progress']), 2)
         self.assertEqual(len(plugin.datasource.metrics['job-progress']), 2)
-        self.assertEqual(len(plugin.datasource.metrics['application-progress.error']), 2)
+        self.assertEqual(
+            len(plugin.datasource.metrics['application-progress.error']), 2)
         self.assertEqual(len(plugin.datasource.metrics['job-parallelism']), 2)
 
 

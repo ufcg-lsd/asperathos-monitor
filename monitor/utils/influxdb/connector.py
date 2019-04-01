@@ -16,6 +16,7 @@
 from datetime import datetime
 from influxdb import InfluxDBClient
 
+
 class InfluxConnector:
     def __init__(self, database_url, database_port, database_name,
                  database_user='root', database_password='root'):
@@ -40,19 +41,22 @@ class InfluxConnector:
     def _get_influx_client(self):
 
         client = InfluxDBClient(self.database_url, self.database_port,
-        self.database_user, self.database_password, self.database_name)
-        
+                                self.database_user, self.database_password,
+                                self.database_name)
+
         return client
-    
+
     def send_metrics(self, measurements):
 
         measurements = measurements[0]
         metrics = {}
 
         metrics['measurement'] = measurements['name']
-        metrics['time'] = datetime.fromtimestamp(measurements['timestamp'] / 1000).strftime('%Y-%m-%dT%H:%M:%SZ')
-        metrics['tags'] = {"host": "server01", "region": "sa-east-1", "job": measurements['dimensions']['application_id']}
+        metrics['time'] = datetime.\
+            fromtimestamp(measurements['timestamp'] /
+                          1000).strftime('%Y-%m-%dT%H:%M:%SZ')
+        metrics['tags'] = {"host": "server01", "region": "sa-east-1",
+                           "job": measurements['dimensions']['application_id']}
         metrics['fields'] = {'value': measurements['value']}
 
         self._get_influx_client().write_points([metrics])
-

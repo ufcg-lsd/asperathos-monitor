@@ -19,7 +19,6 @@ from datetime import datetime
 import json
 import paramiko
 import pytz
-import requests
 import tzlocal
 from monitor.utils.monasca.connector import MonascaConnector
 from monitor.plugins.base import Plugin
@@ -73,7 +72,7 @@ class SparkProgressUPV(Plugin):
 
             elif current_job['status'] == 'SUCCEEDED':
                 elapsed_time = float(self._get_elapsed_time(
-                               current_job['submissionTime']))
+                    current_job['submissionTime']))
 
                 self.remaining_time = self.remaining_time - elapsed_time
 
@@ -81,8 +80,8 @@ class SparkProgressUPV(Plugin):
 
                 # Job Time
                 self.job_expected_time = (self.remaining_time
-                                 / (float(self.number_of_jobs)
-                                 - float(self.current_job_id)))
+                                          / (float(self.number_of_jobs)
+                                             - float(self.current_job_id)))
 
             elif current_job['status'] == 'RUNNING':
                 # Job Progress
@@ -91,14 +90,14 @@ class SparkProgressUPV(Plugin):
 
                 # Elapsed Time
                 elapsed_time = float(self._get_elapsed_time(
-                               current_job['submissionTime']))
+                    current_job['submissionTime']))
 
                 # Reference Value
                 ref_value = (elapsed_time / self.job_expected_time)
 
                 # Error
                 error = job_progress - ref_value
-                
+
                 application_progress_error['name'] = ('application-progress'
                                                       '.error')
 
@@ -112,12 +111,11 @@ class SparkProgressUPV(Plugin):
 
             time.sleep(MONITORING_INTERVAL)
 
-
     def _get_elapsed_time(self, gmt_timestamp):
         try:
             local_tz = tzlocal.get_localzone()
 
-        except Exception as e:
+        except Exception:
             local_tz = "America/Recife"
             local_tz = pytz.timezone(local_tz)
 
@@ -131,7 +129,8 @@ class SparkProgressUPV(Plugin):
 
     def _discover_id_from_spark(self):
         for i in range(30):
-            i, o, e = self.conn.exec_command('curl %s/api/v1/applications' % self.submission_url)
+            i, o, e = self.conn.exec_command('curl %s/api/v1/applications'
+                                             % self.submission_url)
             applications_running = json.loads(o.read())
 
             for app in applications_running:

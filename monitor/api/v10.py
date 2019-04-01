@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask import request
 from monitor.service.api import v10 as api
 
 from monitor.utils import api as u

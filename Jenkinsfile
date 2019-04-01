@@ -1,12 +1,18 @@
 pipeline {
   agent any
   stages {
-    stage('Unit') {
-      agent any
-      steps {
-        sh 'tox -e py27 -r'
-      }
-    }
+        stage('Unit Python 2.7') {
+            agent any
+            steps {
+                sh 'tox -epy27 -r'
+            }
+        }
+        stage('Pep8') {
+            agent any
+            steps {
+                sh 'tox -epep8'
+            }
+        }
     stage('Integration') {
       agent any
       steps {
