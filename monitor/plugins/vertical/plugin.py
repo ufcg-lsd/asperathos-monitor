@@ -13,21 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 
 import redis
 import requests
 import time
-import subprocess
-from subprocess import PIPE
 
 from datetime import datetime
 from monitor.utils.monasca.connector import MonascaConnector
 from monitor.utils.influxdb.connector import InfluxConnector
 from monitor.plugins.base import Plugin
-from influxdb import InfluxDBClient
 
-import kubernetes
+import kubernetes as kube
 
 LOG_FILE = "progress.log"
 TIME_PROGRESS_FILE = "time_progress.log"
@@ -47,8 +43,9 @@ class VerticalProgress(Plugin):
         self.submission_url = info_plugin['count_jobs_url']
         self.expected_time = int(info_plugin['expected_time'])
         self.number_of_jobs = int(info_plugin['number_of_jobs'])
-        self.submission_time = datetime.strptime(info_plugin['submission_time'],
-                                                 '%Y-%m-%dT%H:%M:%S.%fGMT')
+        self.submission_time = datetime.\
+            strptime(info_plugin['submission_time'],
+                     '%Y-%m-%dT%H:%M:%S.%fGMT')
         self.dimensions = {'application_id': self.app_id,
                            'service': 'kubejobs'}
         self.rds = redis.StrictRedis(host=info_plugin['redis_ip'],
@@ -59,15 +56,15 @@ class VerticalProgress(Plugin):
             datasource_type = info_plugin['datasource_type']
             if datasource_type == "monasca":
                 self.datasource = MonascaConnector()
-            
+
             elif datasource_type == "influxdb":
                 influx_url = info_plugin['database_data']['url']
                 influx_port = info_plugin['database_data']['port']
                 database_name = info_plugin['database_data']['name']
-                self.datasource = InfluxConnector(influx_url, influx_port, database_name)
+                self.datasource = InfluxConnector(
+                    influx_url, influx_port, database_name)
             else:
                 print("Unknown datasource type...!")
-        
 
     def _publish_measurement(self, cpu_usage):
 
@@ -77,13 +74,13 @@ class VerticalProgress(Plugin):
 
         # Reference Value
         ref_value = float(self.cpu_threshold)
-        
+
         # Error
-        
+
         print("CPU_USAGE: " + str(cpu_usage))
         print("REF_VALUE: " + str(ref_value))
 
-        error = (float(cpu_usage)/100) - ref_value
+        error = (float(cpu_usage) / 100) - ref_value
 
         application_progress_error['name'] = ('application-progress'
                                               '.error')
@@ -112,7 +109,7 @@ class VerticalProgress(Plugin):
             self.datasource.send_metrics([application_progress_error])
             self.datasource.send_metrics([cpu_usage_metric])
             self.datasource.send_metrics([cpu_quota_metric])
-            
+
         time.sleep(MONITORING_INTERVAL)
 
     def _get_elapsed_time(self):
@@ -124,9 +121,13 @@ class VerticalProgress(Plugin):
 
     def monitoring_application(self):
         try:
-            cpu_usage = requests.get('http://%s:5000' % (self.get_api_address())).text
-            
-            print("Publishing metric %s value %s: " % (self.metric_source, cpu_usage))
+            cpu_usage = requests.get(
+                'http://%s:5000' %
+                (self.get_api_address())).text
+
+            print(
+                "Publishing metric %s value %s: " %
+                (self.metric_source, cpu_usage))
 
             self._publish_measurement(cpu_usage=cpu_usage)
 
@@ -139,7 +140,9 @@ class VerticalProgress(Plugin):
 
     def get_cpu_quota(self):
         try:
-            cpu_quota = requests.get('http://%s:5000/%s' % (self.get_api_address(), self.get_metric_endpoint)).text
+            cpu_quota = requests.get(
+                'http://%s:5000/%s' %
+                (self.get_api_address(), self.get_metric_endpoint)).text
             return cpu_quota
 
         except Exception as ex:
@@ -156,4 +159,3 @@ class VerticalProgress(Plugin):
         api_address = node_info.status.addresses[0].address
 
         return api_address
-        

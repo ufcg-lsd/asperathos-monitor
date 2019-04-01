@@ -14,11 +14,6 @@
 # limitations under the License.
 
 from monascaclient import exc
-import ConfigParser
-import os
-import sys
-import requests
-import json
 
 from monascaclient import client as monclient, ksclient
 from monitor.service import api
@@ -33,7 +28,6 @@ class MonascaConnector:
         self.monasca_api_version = api.monasca_api_version
         self._get_monasca_client()
 
-
     def get_measurements(self, metric_name, dimensions,
                          start_time='2014-01-01T00:00:00Z'):
 
@@ -46,9 +40,9 @@ class MonascaConnector:
                 name=metric_name, dimensions=dimensions,
                 start_time=start_time, debug=False)
         except exc.HTTPException as httpex:
-            print httpex.message
+            print(httpex)
         except Exception as ex:
-            print ex.message
+            print(ex)
         if len(measurements) > 0:
             return measurements[0]['measurements']
         else:
@@ -91,8 +85,8 @@ class MonascaConnector:
         try:
             monasca_client = self._get_monasca_client()
             monasca_client.metrics.create(**batch_metrics)
-        
+
         except exc.HTTPException as httpex:
-            print httpex.message
+            print(httpex)
         except Exception as ex:
-            print ex.message
+            print(ex)

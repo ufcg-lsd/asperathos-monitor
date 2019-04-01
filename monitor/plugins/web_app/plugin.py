@@ -23,7 +23,8 @@ from monitor.plugins.base import Plugin
 class WebAppMonitor(Plugin):
 
     def __init__(self, app_id, info_plugin, keypair, retries=60):
-        Plugin.__init__(self, app_id, info_plugin, collect_period=5, retries=retries)
+        Plugin.__init__(self, app_id, info_plugin,
+                        collect_period=5, retries=retries)
         self.app_id = app_id
         self.host_ip = info_plugin['host_ip']
         self.keypair_path = keypair
@@ -44,12 +45,13 @@ class WebAppMonitor(Plugin):
         keypair = paramiko.RSAKey.from_private_key_file(self.keypair_path)
         conn = paramiko.SSHClient()
         conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        conn.connect(hostname=self.host_ip, username=self.host_username, pkey=keypair)
+        conn.connect(hostname=self.host_ip,
+                     username=self.host_username, pkey=keypair)
         return conn
 
     def _publish_metrics(self, last_log):
         metric = {}
-        print last_log
+        print(last_log)
         # Check if this log line contains a new metric measurement
         if '[Random]' in last_log and self.last_checked != last_log:
             self.last_checked = last_log
@@ -74,9 +76,11 @@ class WebAppMonitor(Plugin):
         try:
 
             conn = self._get_ssh_connection()
-            stdin , stdout, stderr = conn.exec_command("sudo tail -1 %s" % self.log_path)
+            stdin, stdout, stderr = conn.exec_command("sudo tail -1 %s"
+                                                      % self.log_path)
             self._publish_metrics(stdout.read())
 
         except Exception as ex:
-            print "Monitoring %s is not possible. \nError: %s. %s remaining attempts" % (self.app_id, ex.message, self.attempts)
+            print "Monitoring %s is not possible. \nError: %s. %s\
+                 remaining attempts" % (self.app_id, ex.message, self.attempts)
             raise ex

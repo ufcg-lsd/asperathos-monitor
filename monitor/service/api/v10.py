@@ -13,11 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
-import os
-import sys
 
-from monitor.service import api
 from monitor import exceptions as ex
 from monitor.utils.logger import Log
 from monitor.plugins.builder import MonitorBuilder
@@ -30,19 +26,19 @@ builder = MonitorBuilder()
 
 
 def start_monitoring(data, app_id):
-    """ These conditional cases choose the class executor's constructor of the 
+    """ These conditional cases choose the class executor's constructor of the
     application submitted
     Note: some executors need the keypair to access remotely some machine and
     execute the monitoring logic, but this attribute is not mandatory for all
     the executors."""
- 
+
     if 'plugin' not in data or 'plugin_info' not in data:
         API_LOG.log("Missing parameters in request")
         raise ex.BadRequestException()
 
     plugin = data['plugin']
     plugin_info = data['plugin_info']
-   
+
     if app_id not in monitored_apps:
         executor = builder.get_monitor(plugin, app_id, plugin_info)
         monitored_apps[app_id] = executor
