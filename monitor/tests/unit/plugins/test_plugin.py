@@ -14,14 +14,16 @@
 # limitations under the License.
 
 from datetime import datetime
+from mock import patch
 import unittest
 
-from mock import patch
-from monitor.tests.mocks.mock_redis import MockRedis
+
+from monitor import exceptions as ex
+from monitor.plugins.kubejobs.plugin import KubeJobProgress
+from monitor.tests.mocks.mock_influx import MockInfluxConnector
 from monitor.tests.mocks.mock_k8s import MockKube
 from monitor.tests.mocks.mock_monasca import MockMonascaConnector
-from monitor.tests.mocks.mock_influx import MockInfluxConnector
-from monitor.plugins.kubejobs.plugin import KubeJobProgress
+from monitor.tests.mocks.mock_redis import MockRedis
 
 
 class TestKubeJobs(unittest.TestCase):
@@ -34,9 +36,7 @@ class TestKubeJobs(unittest.TestCase):
         """
         self.app_id = "kj-10111213"
         self.info_plugin = {
-            "monitor_plugin": "kubejobs",
             "expected_time": 500,
-            "count_jobs_url": "mock.com",
             "number_of_jobs": 1500,
             "submission_time": "2017-04-11T00:00:00.0003GMT",
             "redis_ip": "192.168.0.0",
@@ -197,6 +197,26 @@ class TestKubeJobs(unittest.TestCase):
         self.assertEqual(
             len(plugin.datasource.metrics['application-progress.error']), 2)
         self.assertEqual(len(plugin.datasource.metrics['job-parallelism']), 2)
+
+    def test_wrong_request_body(self):
+        """
+        Asserts that a BadRequestException will occur
+        if one of the parameters is missing
+        Args: None
+        Returns: None
+        """
+
+        request_error_counter = len(self.info_plugin)
+        for key in self.info_plugin:
+            info_plugin_test = self.info_plugin.copy()
+            del info_plugin_test[key]
+            try:
+                KubeJobProgress(self.app_id, info_plugin_test,
+                                self.collect_period, self.retries)
+            except ex.BadRequestException:
+                request_error_counter -= 1
+
+        self.assertEqual(request_error_counter, 0)
 
 
 if __name__ == "__main__":
