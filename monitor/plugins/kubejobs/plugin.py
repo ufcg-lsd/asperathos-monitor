@@ -13,15 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import redis
+from datetime import datetime
 import time
 
-from datetime import datetime
-from monitor.utils.monasca.connector import MonascaConnector
-from monitor.utils.influxdb.connector import InfluxConnector
-from monitor.service import api
+import redis
+import six
+
+from monitor import exceptions as ex
 from monitor.plugins.base import Plugin
+from monitor.service import api
+from monitor.utils.influxdb.connector import InfluxConnector
 from monitor.utils.logger import Log
+from monitor.utils.monasca.connector import MonascaConnector
 
 import kubernetes
 
@@ -36,6 +39,7 @@ class KubeJobProgress(Plugin):
     def __init__(self, app_id, info_plugin, collect_period=2, retries=10):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
+        self.validate(info_plugin)
         self.LOG = Log(LOG_NAME, LOG_FILE)
         self.enable_visualizer = info_plugin['enable_visualizer']
         self.expected_time = int(info_plugin['expected_time'])
@@ -156,3 +160,24 @@ class KubeJobProgress(Plugin):
 
             self.LOG.log(ex.message)
             raise
+
+    def validate(self, data):
+        data_model = {
+            "datasource_type": six.string_types,
+            "enable_visualizer": bool,
+            "expected_time": int,
+            "number_of_jobs": int,
+            "redis_ip": six.string_types,
+            "redis_port": int,
+            "submission_time": six.string_types
+        }
+
+        for key in data_model:
+            if (key not in data):
+                raise ex.BadRequestException(
+                    "Variable \"{}\" is missing".format(key))
+
+            if (not isinstance(data[key], data_model[key])):
+                raise ex.BadRequestException(
+                    "\"{}\" has unexpected variable type: {}. Was expecting {}"
+                    .format(key, type(data[key]), data_model[key]))
