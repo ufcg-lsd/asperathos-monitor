@@ -16,13 +16,11 @@
 
 from monitor import exceptions as ex
 from monitor.utils.logger import Log
-from monitor.plugins.builder import MonitorBuilder
-
+from monitor.service import plugin_service
 
 API_LOG = Log("APIv10", "APIv10.log")
 
 monitored_apps = {}
-builder = MonitorBuilder()
 
 
 def start_monitoring(data, app_id):
@@ -40,7 +38,7 @@ def start_monitoring(data, app_id):
     plugin_info = data['plugin_info']
 
     if app_id not in monitored_apps:
-        executor = builder.get_monitor(plugin, app_id, plugin_info)
+        executor = plugin_service.get_plugin(plugin)(app_id, plugin_info)
         monitored_apps[app_id] = executor
         executor.start()
 
@@ -56,3 +54,10 @@ def stop_monitoring(app_id):
 
     # Stop the plugin and remove from the data structure
     monitored_apps.pop(app_id, None).stop()
+
+
+def install_plugin(source, plugin):
+    status = plugin_service.install_plugin(source, plugin)
+    if status:
+        return {"message": "Plugin installed successfully"}, 200
+    return {"message": "Error installing plugin"}, 400
