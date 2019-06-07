@@ -39,37 +39,13 @@ try:
         if plugin != '' and plugin not in config.sections():
             raise Exception("plugin '%s' section missing" % plugin)
 
-    if 'openstack_generic' in plugins:
-        os_keypair = config.get('openstack_generic', 'key_pair')
-
-    if 'spark_mesos' in plugins:
-        mesos_cluster_addr = config.get('spark_mesos', 'mesos_cluster_addr')
-        mesos_password = config.get('spark_mesos', 'mesos_password')
-        mesos_username = config.get('spark_mesos', 'mesos_username')
-
+    # Setting default value
+    k8s_manifest = CONFIG_PATH
     if 'kubejobs' in plugins:
-
-        # Setting default value
-        k8s_manifest = CONFIG_PATH
-
         # If explicitly stated in the cfg file, overwrite the variable
         if(config.has_section('kubejobs')):
             if(config.has_option('kubejobs', 'k8s_manifest')):
                 k8s_manifest = config.get('kubejobs', 'k8s_manifest')
-
-    if 'external_api' in plugins:
-
-        # Setting default value
-        k8s_manifest = CONFIG_PATH
-
-        # If explicitly stated in the cfg file, overwrite the variable
-        if(config.has_section('external_api')):
-            if(config.has_option('external_api', 'k8s_manifest')):
-                k8s_manifest = config.get('external_api', 'k8s_manifest')
-
-        metric_source = config.get('external_api', 'metric_source')
-        get_metric_endpoint = config.get('external_api', 'get_metric_endpoint')
-        threshold = config.get('external_api', 'threshold')
 
     """ Monasca parameters """
     monasca_endpoint = config.get('monasca', 'monasca_endpoint')
