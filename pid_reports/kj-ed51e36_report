@@ -1,0 +1,11 @@
+Report Job kj-ed51e36
+Scaling Strategy: pid
+
+Heuristics: {u'proportional_gain': 1, u'derivative_gain': 1, u'integral_gain': 1}
+Max Error: 0.263092369478 Timestamp: 2019-06-28 16:00:45.825347
+Min Error: -0.146666666667 Timestamp: 2019-06-28 15:58:47.210808
+Final Error: 0.258775100402 Timestamp: 2019-06-28 16:00:49.915937
+Final Replicas: 1 Timestamp: 2019-06-28 16:00:49.915937
+
+
+ --------- END ----------

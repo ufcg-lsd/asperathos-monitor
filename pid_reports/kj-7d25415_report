@@ -1,0 +1,10 @@
+Report Job kj-7d25415
+Scaling Strategy: pid
+
+Max Error: 0.213554216867 Timestamp: 2019-07-01 15:09:45.710351
+Min Error: -0.241706827309 Timestamp: 2019-07-01 15:16:09.286508
+Final Error: 0.0543775100402 Timestamp: 2019-07-01 15:17:34.968086
+Final Replicas: 5 Timestamp: 2019-07-01 15:17:34.968086
+
+
+ --------- END ----------

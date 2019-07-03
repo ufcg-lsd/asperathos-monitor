@@ -25,6 +25,7 @@ from monitor.service import api
 from monitor.utils.influxdb.connector import InfluxConnector
 from monitor.utils.logger import Log
 from monitor.utils.monasca.connector import MonascaConnector
+from monitor.plugins.kubejobs.job_report import JobReport
 
 import kubernetes
 
@@ -36,7 +37,8 @@ MONITORING_INTERVAL = 2
 
 class KubeJobProgress(Plugin):
 
-    def __init__(self, app_id, info_plugin, collect_period=2, retries=10):
+    def __init__(self, app_id, info_plugin, collect_period=2,
+                 retries=10, last_replicas=None):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
         self.validate(info_plugin)
@@ -53,6 +55,10 @@ class KubeJobProgress(Plugin):
                                      port=info_plugin['redis_port'])
         self.metric_queue = "%s:metrics" % self.app_id
         self.current_job_id = 0
+        self.job_report = JobReport(info_plugin)
+        self.report_flag = True
+        self.last_replicas = last_replicas
+        self.last_error = None
 
         kubernetes.config.load_kube_config(api.k8s_manifest)
         self.b_v1 = kubernetes.client.BatchV1Api()
@@ -83,6 +89,9 @@ class KubeJobProgress(Plugin):
         # Job Progress
 
         job_progress = min(1.0, (float(jobs_completed) / self.number_of_jobs))
+        print "##########################"
+        print "Jobs completed: " + str(jobs_completed)
+        print "Total jobs: " + str(self.number_of_jobs)
         # Elapsed Time
         elapsed_time = float(self._get_elapsed_time())
 
@@ -95,6 +104,13 @@ class KubeJobProgress(Plugin):
                      % (job_progress, ref_value, replicas))
 
         error = job_progress - ref_value
+
+        self.last_error = error
+
+        if replicas is not None:
+            self.last_replicas = replicas
+
+        self.report_job(job_progress)
 
         application_progress_error['name'] = ('application-progress'
                                               '.error')
@@ -131,10 +147,36 @@ class KubeJobProgress(Plugin):
 
         time.sleep(MONITORING_INTERVAL)
 
+    def report_job(self, progress):
+        
+        current_time = str(datetime.now())
+
+        self.job_report.verify_and_set_max_error(self.last_error, current_time)
+        self.job_report.verify_and_set_min_error(self.last_error, current_time)
+
+        if (progress == 1 or self.job_is_completed()) and self.report_flag:
+            self.report_flag = False
+            self.job_report.set_final_error(self.last_error, current_time)
+            self.job_report.set_final_replicas(self.last_replicas)
+            self.job_report.generate_report(self.app_id)
+
+
     def _get_num_replicas(self):
         job = self.b_v1.read_namespaced_job(
             name=self.app_id, namespace="default")
         return job.status.active
+    
+    def job_is_completed(self):
+
+        job = self.b_v1.read_namespaced_job(
+            name=self.app_id, namespace="default")
+
+        if job.status.active is None:
+            if job.status.conditions.pop().type == 'Complete':
+                return True
+        return False
+        
+
 
     def _get_elapsed_time(self):
         datetime_now = datetime.now()
@@ -157,7 +199,7 @@ class KubeJobProgress(Plugin):
             self.LOG.log(("Error: No application found for %s.\
                  %s remaining attempts")
                          % (self.app_id, self.attempts))
-
+            self.report_job(2)
             self.LOG.log(ex.message)
             raise
 
