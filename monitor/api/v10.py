@@ -12,7 +12,7 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from flask import jsonify
 from monitor.service.api import v10 as api
 
 from monitor.utils import api as u
@@ -39,3 +39,11 @@ def start_monitoring(data, app_id):
 @rest.put('/monitoring/<app_id>/stop')
 def stop_monitoring(app_id, data):
     return u.render(api.stop_monitoring(app_id))
+
+
+@rest.post('/plugins')
+def install_plugin(data):
+    plugin = data.get('plugin_source')
+    source = data.get('install_source')
+    response, status = api.install_plugin(plugin, source)
+    return jsonify(response), status
