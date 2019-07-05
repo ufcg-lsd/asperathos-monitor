@@ -47,13 +47,14 @@ try:
             if(config.has_option('kubejobs', 'k8s_manifest')):
                 k8s_manifest = config.get('kubejobs', 'k8s_manifest')
 
-    """ Monasca parameters """
-    monasca_endpoint = config.get('monasca', 'monasca_endpoint')
-    monasca_username = config.get('monasca', 'username')
-    monasca_password = config.get('monasca', 'password')
-    monasca_auth_url = config.get('monasca', 'auth_url')
-    monasca_project_name = config.get('monasca', 'project_name')
-    monasca_api_version = config.get('monasca', 'api_version')
+    if 'monasca' in plugins:
+        """ Monasca parameters """
+        monasca_endpoint = config.get('monasca', 'monasca_endpoint')
+        monasca_username = config.get('monasca', 'username')
+        monasca_password = config.get('monasca', 'password')
+        monasca_auth_url = config.get('monasca', 'auth_url')
+        monasca_project_name = config.get('monasca', 'project_name')
+        monasca_api_version = config.get('monasca', 'api_version')
 
 except Exception as e:
     LOG.log("Error: %s" % e.message)
