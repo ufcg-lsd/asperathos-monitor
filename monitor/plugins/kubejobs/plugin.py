@@ -163,7 +163,6 @@ class KubeJobProgress(Plugin):
 
     def validate(self, data):
         data_model = {
-            "datasource_type": six.string_types,
             "enable_visualizer": bool,
             "expected_time": int,
             "number_of_jobs": int,
@@ -171,6 +170,9 @@ class KubeJobProgress(Plugin):
             "redis_port": int,
             "submission_time": six.string_types
         }
+
+        if 'enable_visualizer' in data and data['enable_visualizer']:
+            data_model.update({ "datasource_type": six.string_types })
 
         for key in data_model:
             if (key not in data):
