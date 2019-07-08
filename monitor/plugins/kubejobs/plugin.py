@@ -214,7 +214,7 @@ class KubeJobProgress(Plugin):
         }
 
         if 'enable_visualizer' in data and data['enable_visualizer']:
-            data_model.update({ "datasource_type": six.string_types })
+            data_model.update({"datasource_type": six.string_types})
 
         for key in data_model:
             if (key not in data):
