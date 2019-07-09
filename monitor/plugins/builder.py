@@ -12,3 +12,24 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from monitor import exceptions as ex
+from monitor.service import api
+from monitor.plugins.kubejobs.plugin import KubeJobProgress
+
+
+class MonitorBuilder:
+    def __init__(self):
+        pass
+
+    def get_monitor(self, plugin, app_id, plugin_info):
+        executor = None
+
+        if plugin == "kubejobs":
+            executor = KubeJobProgress(
+                app_id, plugin_info, retries=api.retries)
+
+        else:
+            raise ex.BadRequestException()
+
+        return executor
