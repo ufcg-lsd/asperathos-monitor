@@ -19,11 +19,12 @@ import unittest
 
 
 from monitor import exceptions as ex
-from monitor.plugins.kubejobs.plugin import KubeJobProgress
+from kubejobs import KubeJobProgress
 from monitor.tests.mocks.mock_influx import MockInfluxConnector
 from monitor.tests.mocks.mock_k8s import MockKube
 from monitor.tests.mocks.mock_monasca import MockMonascaConnector
 from monitor.tests.mocks.mock_redis import MockRedis
+
 
 
 class TestKubeJobs(unittest.TestCase):
@@ -42,7 +43,12 @@ class TestKubeJobs(unittest.TestCase):
             "redis_ip": "192.168.0.0",
             "redis_port": 5000,
             "enable_visualizer": True,
-            "datasource_type": "influxfb"
+            "datasource_type": "influxdb",
+            "scaling_strategy": 'default',
+            "database_data": {'url': '123123.com',
+                              'port': 1231,
+                              'name': 'job-influx'
+                              }
         }
 
         self.collect_period = 5
@@ -60,7 +66,6 @@ class TestKubeJobs(unittest.TestCase):
         Returns: None
         """
         mock_config.return_value = None
-
         plugin = KubeJobProgress(self.app_id, self.info_plugin,
                                  self.collect_period, self.retries)
 

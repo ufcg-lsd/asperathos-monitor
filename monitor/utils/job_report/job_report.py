@@ -21,13 +21,28 @@ class JobReport():
                  final_error=(None,None)):
 
         self.scaling_strategy = info_plugin['scaling_strategy']
-        self.heuristic_options = info_plugin['heuristic_options']
+        self.heuristic_options = self.get_heuristic_options(info_plugin)
         self.max_error = max_error
         self.min_error = min_error
         self.final_replicas = final_replicas
         self.final_error = final_error
-
     
+    def to_dict(self):
+        report = {
+            'scaling_strategy': self.scaling_strategy,
+            'heuristic_options': self.heuristic_options,
+            'max_error': self.max_error,
+            'min_error': self.min_error,
+            'final_replicas': self.final_replicas,
+            'final_error': self.final_error
+        }
+
+        return report
+
+    def get_heuristic_options(self, info_plugin):
+        if self.scaling_strategy == 'pid':
+            return info_plugin['heuristic_options']
+
     def get_max_error(self):
         return self.max_error
 
@@ -68,11 +83,6 @@ class JobReport():
         min_error = self.get_min_error()
         final_error = self.get_final_error()
         final_replicas = self.get_final_replicas()
-
-        print max_error
-        print min_error
-        print final_error
-        print final_replicas
         
         prefix = 'default_reports/'
         if self.scaling_strategy == 'pid':
@@ -82,7 +92,7 @@ class JobReport():
 
         f.write("Report Job " + str(job_id) + "\n")
         f.write("Scaling Strategy: " + self.scaling_strategy + '\n\n')
-        # f.write('Heuristics: ' + str(self.heuristic_options) + '\n')
+        f.write('Heuristics: ' + str(self.heuristic_options) + '\n')
         f.write("Max Error: " + str(max_error[0]) + " Timestamp: " + str(max_error[1]) + "\n")
         f.write("Min Error: " + str(min_error[0]) + " Timestamp: " + str(min_error[1]) + "\n")
         f.write("Final Error: " + str(final_error[0]) + " Timestamp: " + str(final_error[1]) + "\n")

@@ -25,6 +25,7 @@ from monitor.service import api
 from monitor.utils.influxdb.connector import InfluxConnector
 from monitor.utils.logger import Log
 from monitor.utils.monasca.connector import MonascaConnector
+from monitor.utils.job_report.job_report import JobReport
 
 import kubernetes
 
@@ -37,7 +38,7 @@ MONITORING_INTERVAL = 2
 class KubeJobProgress(Plugin):
 
     def __init__(self, app_id, info_plugin, collect_period=2,
-                 retries=api.retries):
+                 retries=10, last_replicas=None):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
         self.validate(info_plugin)
@@ -45,97 +46,171 @@ class KubeJobProgress(Plugin):
         self.enable_visualizer = info_plugin['enable_visualizer']
         self.expected_time = int(info_plugin['expected_time'])
         self.number_of_jobs = int(info_plugin['number_of_jobs'])
-        self.submission_time = datetime.\
-            strptime(info_plugin['submission_time'],
-                     '%Y-%m-%dT%H:%M:%S.%fGMT')
-        self.dimensions = {'application_id': self.app_id,
-                           'service': 'kubejobs'}
-        self.rds = redis.StrictRedis(host=info_plugin['redis_ip'],
-                                     port=info_plugin['redis_port'])
+        self.submission_time = self.get_submission_time(info_plugin)
+        self.dimensions = self.get_dimensions()
+        self.rds = self.setup_redis(info_plugin)
         self.metric_queue = "%s:metrics" % self.app_id
         self.current_job_id = 0
-
+        self.job_report = JobReport(info_plugin)
+        self.report_flag = True
+        self.last_replicas = last_replicas
+        self.last_error = None
         kubernetes.config.load_kube_config(api.k8s_manifest)
         self.b_v1 = kubernetes.client.BatchV1Api()
+        self.datasource = self.setup_datasource(info_plugin)
+    
+    def get_dimensions(self):
+        return {'application_id': self.app_id,
+                'service': 'kubejobs'}
+    
+    def get_submission_time(self, info_plugin):
+        return datetime.strptime(info_plugin['submission_time'],
+                                 '%Y-%m-%dT%H:%M:%S.%fGMT')
+        
+    def setup_redis(self, info_plugin):
+        return redis.StrictRedis(host=info_plugin['redis_ip'],
+                                 port=info_plugin['redis_port'])
 
+    def setup_datasource(self, info_plugin):
         if self.enable_visualizer:
             datasource_type = info_plugin['datasource_type']
             if datasource_type == "monasca":
-                self.datasource = MonascaConnector()
+                return MonascaConnector()
             elif datasource_type == "influxdb":
+                print info_plugin
                 influx_url = info_plugin['database_data']['url']
                 influx_port = info_plugin['database_data']['port']
                 database_name = info_plugin['database_data']['name']
-                self.datasource = InfluxConnector(
-                    influx_url, influx_port, database_name)
+                return InfluxConnector(influx_url,
+                                       influx_port,
+                                       database_name)
             else:
-                self.LOG.log("Unknown datasource type...!")
+                raise ex.BadRequestException("Unknown datasource type...!")
+
+    def calculate_measurement(self, jobs_completed):
+        job_progress = self.get_job_progress(jobs_completed)
+        ref_value = self.get_ref_value()
+        replicas = self._get_num_replicas()       
+        error = self.get_error(job_progress, ref_value)
+        self.last_error = error
+
+        return job_progress, ref_value, replicas, error
+
+    def get_error(self, job_progress, ref_value):
+        error = job_progress - ref_value
+        return error
+
+    def get_ref_value(self):
+        elapsed_time = float(self._get_elapsed_time())
+        ref_value = (elapsed_time / self.expected_time)
+        return ref_value
+        
+    def get_job_progress(self, jobs_completed):
+        job_progress = min(1.0, (float(jobs_completed) / self.number_of_jobs))
+        return job_progress
+
+    def get_parallelism_manifest(self, replicas, timestamp):
+        parallelism = {'name': 'job-parallelism',
+                       'value': replicas,
+                       'timestamp': timestamp,
+                       'dimensions': self.dimensions
+                      }
+        return parallelism
+
+    def get_time_progress_error_manifest(self, ref_value, timestamp):
+        time_progress_error = {'name': 'time-progress',
+                              'value': ref_value,
+                              'timestamp': timestamp,
+                              'dimensions': self.dimensions
+                              }
+
+        return time_progress_error
+
+    def get_job_progress_error_manifest(self, job_progress, timestamp):
+        job_progress_error = {'name': 'job-progress',
+                              'value': job_progress,
+                              'timestamp': timestamp,
+                              'dimensions': self.dimensions
+                             }
+        return job_progress_error
+    def get_application_progress_error_manifest(self, error, timestamp):
+        application_progress_error = {'name': 'application-progress.error',
+                                      'value': error,
+                                      'timestamp': timestamp,
+                                      'dimensions': self.dimensions
+                                     }
+        return application_progress_error
 
     def _publish_measurement(self, jobs_completed):
 
-        application_progress_error = {}
-        job_progress_error = {}
-        time_progress_error = {}
-        parallelism = {}
-
-        # Init
         self.LOG.log("Jobs Completed: %i" % jobs_completed)
+        job_progress, ref_value, replicas, error = \
+            self.calculate_measurement(jobs_completed)
+        
+        self.report_job(job_progress)
 
-        # Job Progress
-
-        job_progress = min(1.0, (float(jobs_completed) / self.number_of_jobs))
-        # Elapsed Time
-        elapsed_time = float(self._get_elapsed_time())
-
-        # Reference Value
-        ref_value = (elapsed_time / self.expected_time)
-        replicas = self._get_num_replicas()
-        # Error
-        self.LOG.log("Job progress: %s\nTime Progress: %s\nReplicas: %s"
-                     "\n========================"
-                     % (job_progress, ref_value, replicas))
-
-        error = job_progress - ref_value
-
-        application_progress_error['name'] = ('application-progress'
-                                              '.error')
-
-        application_progress_error['value'] = error
-        application_progress_error['timestamp'] = time.time() * 1000
-        application_progress_error['dimensions'] = self.dimensions
-
-        job_progress_error['name'] = 'job-progress'
-        job_progress_error['value'] = job_progress
-        job_progress_error['timestamp'] = time.time() * 1000
-        job_progress_error['dimensions'] = self.dimensions
-
-        time_progress_error['name'] = 'time-progress'
-        time_progress_error['value'] = ref_value
-        time_progress_error['timestamp'] = time.time() * 1000
-        time_progress_error['dimensions'] = self.dimensions
-
-        parallelism['name'] = "job-parallelism"
-        parallelism['value'] = replicas
-        parallelism['timestamp'] = time.time() * 1000
-        parallelism['dimensions'] = self.dimensions
-
-        self.LOG.log("Error: %s " % application_progress_error['value'])
-
+        timestamp = time.time() * 1000
+        application_progress_error = \
+            self.get_application_progress_error_manifest(error, timestamp)
+        
         self.rds.rpush(self.metric_queue,
                        str(application_progress_error))
-
+        
         if self.enable_visualizer:
-            self.datasource.send_metrics([application_progress_error])
-            self.datasource.send_metrics([job_progress_error])
-            self.datasource.send_metrics([time_progress_error])
-            self.datasource.send_metrics([parallelism])
-
+            job_progress_error = \
+                self.get_job_progress_error_manifest(job_progress, timestamp)
+            time_progress_error = \
+                self.get_time_progress_error_manifest(ref_value, timestamp)
+            parallelism = \
+                self.get_parallelism_manifest(replicas, timestamp)
+        
+            self.LOG.log("Error: %s " % application_progress_error['value'])
+        
+            self.publish_visualizer_measurement(application_progress_error,
+                                                job_progress_error,
+                                                time_progress_error,
+                                                parallelism)   
         time.sleep(MONITORING_INTERVAL)
+
+    def publish_visualizer_measurement(self, application_progress_error,
+                                       job_progress_error,
+                                       time_progress_error,
+                                       parallelism):
+        
+        self.datasource.send_metrics([application_progress_error])
+        self.datasource.send_metrics([job_progress_error])
+        self.datasource.send_metrics([time_progress_error])
+        self.datasource.send_metrics([parallelism])
+
+
+    def report_job(self, progress):
+        
+        current_time = str(datetime.now())
+
+        self.job_report.verify_and_set_max_error(self.last_error, current_time)
+        self.job_report.verify_and_set_min_error(self.last_error, current_time)
+
+        if (progress == 1 or self.job_is_completed()) and self.report_flag:
+            self.report_flag = False
+            self.job_report.set_final_error(self.last_error, current_time)
+            self.job_report.set_final_replicas(self.last_replicas)
+            self.job_report.generate_report(self.app_id)
 
     def _get_num_replicas(self):
         job = self.b_v1.read_namespaced_job(
             name=self.app_id, namespace="default")
-        return job.status.active
+        replicas = job.status.active
+        if replicas is not None: self.last_replicas = replicas
+        return replicas
+    
+    def job_is_completed(self):
+
+        job = self.b_v1.read_namespaced_job(
+            name=self.app_id, namespace="default")
+
+        if job.status.active is None:
+            return True
+        return False
 
     def _get_elapsed_time(self):
         datetime_now = datetime.now()
@@ -158,20 +233,28 @@ class KubeJobProgress(Plugin):
             self.LOG.log(("Error: No application found for %s.\
                  %s remaining attempts")
                          % (self.app_id, self.attempts))
-
+            self.report_job(2)
             self.LOG.log(ex.message)
             raise
 
     def validate(self, data):
         data_model = {
-            "datasource_type": six.string_types,
             "enable_visualizer": bool,
             "expected_time": int,
             "number_of_jobs": int,
             "redis_ip": six.string_types,
             "redis_port": int,
-            "submission_time": six.string_types
+            "submission_time": six.string_types,
+            "scaling_strategy": six.string_types
         }
+
+        if 'enable_visualizer' in data and data['enable_visualizer']:
+            data_model.update({"datasource_type": six.string_types,
+                               "database_data": dict
+                              })
+
+        if 'scaling_strategy' in data and data['scaling_strategy'] == 'pid':
+            data_model.update({"heuristic_options": dict})
 
         for key in data_model:
             if (key not in data):
@@ -182,6 +265,5 @@ class KubeJobProgress(Plugin):
                 raise ex.BadRequestException(
                     "\"{}\" has unexpected variable type: {}. Was expecting {}"
                     .format(key, type(data[key]), data_model[key]))
-
 
 PLUGIN = KubeJobProgress

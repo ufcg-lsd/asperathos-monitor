@@ -40,6 +40,9 @@ def start_monitoring(data, app_id):
 def stop_monitoring(app_id, data):
     return u.render(api.stop_monitoring(app_id))
 
+@rest.get('/monitoring/<app_id>/report')
+def get_job_report(app_id):
+    return jsonify(api.get_job_report(app_id)), 200
 
 @rest.post('/plugins')
 def install_plugin(data):
