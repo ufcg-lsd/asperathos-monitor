@@ -65,7 +65,6 @@ def get_job_report(app_id):
         return job.job_report.to_dict()
     return {'message': 'Job is running yet!'}
 
-
 def install_plugin(source, plugin):
     status = plugin_service.install_plugin(source, plugin)
     if status:

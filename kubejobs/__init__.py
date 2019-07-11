@@ -39,6 +39,7 @@ class KubeJobProgress(Plugin):
 
     def __init__(self, app_id, info_plugin, collect_period=2,
                  retries=10, last_replicas=None):
+
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
         self.validate(info_plugin)
@@ -77,7 +78,6 @@ class KubeJobProgress(Plugin):
             if datasource_type == "monasca":
                 return MonascaConnector()
             elif datasource_type == "influxdb":
-                print info_plugin
                 influx_url = info_plugin['database_data']['url']
                 influx_port = info_plugin['database_data']['port']
                 database_name = info_plugin['database_data']['name']
