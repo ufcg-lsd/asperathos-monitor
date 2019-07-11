@@ -56,6 +56,7 @@ class KubeJobProgress(Plugin):
         self.report_flag = True
         self.last_replicas = last_replicas
         self.last_error = None
+        self.last_progress = None
         kubernetes.config.load_kube_config(api.k8s_manifest)
         self.b_v1 = kubernetes.client.BatchV1Api()
         self.datasource = self.setup_datasource(info_plugin)
@@ -92,12 +93,12 @@ class KubeJobProgress(Plugin):
         ref_value = self.get_ref_value()
         replicas = self._get_num_replicas()       
         error = self.get_error(job_progress, ref_value)
-        self.last_error = error
-
+        
         return job_progress, ref_value, replicas, error
 
     def get_error(self, job_progress, ref_value):
         error = job_progress - ref_value
+        self.last_error = error
         return error
 
     def get_ref_value(self):
@@ -147,8 +148,7 @@ class KubeJobProgress(Plugin):
         job_progress, ref_value, replicas, error = \
             self.calculate_measurement(jobs_completed)
         
-        self.report_job(job_progress)
-
+        self.last_progress = job_progress
         timestamp = time.time() * 1000
         application_progress_error = \
             self.get_application_progress_error_manifest(error, timestamp)
@@ -170,6 +170,7 @@ class KubeJobProgress(Plugin):
                                                 job_progress_error,
                                                 time_progress_error,
                                                 parallelism)   
+        self.report_job()
         time.sleep(MONITORING_INTERVAL)
 
     def publish_visualizer_measurement(self, application_progress_error,
@@ -182,16 +183,17 @@ class KubeJobProgress(Plugin):
         self.datasource.send_metrics([time_progress_error])
         self.datasource.send_metrics([parallelism])
 
+    def report_job(self):
+        if self.report_flag:
+            current_time = str(datetime.now())
+            self.job_report.verify_and_set_max_error(self.last_error, current_time)
+            self.job_report.verify_and_set_min_error(self.last_error, current_time)
 
-    def report_job(self, progress):
-        
-        current_time = str(datetime.now())
+            if self.last_progress == 1 or self.job_is_completed():
+                self.report_flag = False
+                self.generate_report()
 
-        self.job_report.verify_and_set_max_error(self.last_error, current_time)
-        self.job_report.verify_and_set_min_error(self.last_error, current_time)
-
-        if (progress == 1 or self.job_is_completed()) and self.report_flag:
-            self.report_flag = False
+    def generate_report(self, current_time=str(datetime.now())):
             self.job_report.set_final_error(self.last_error, current_time)
             self.job_report.set_final_replicas(self.last_replicas)
             self.job_report.generate_report(self.app_id)
@@ -233,7 +235,8 @@ class KubeJobProgress(Plugin):
             self.LOG.log(("Error: No application found for %s.\
                  %s remaining attempts")
                          % (self.app_id, self.attempts))
-            self.report_job(2)
+            self.report_job()
+            self.generate_report()
             self.LOG.log(ex.message)
             raise
 
