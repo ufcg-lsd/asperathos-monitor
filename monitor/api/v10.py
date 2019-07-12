@@ -42,7 +42,13 @@ def stop_monitoring(app_id, data):
 
 @rest.get('/monitoring/<app_id>/report')
 def get_job_report(app_id):
-    return jsonify(api.get_job_report(app_id)), 200
+    return jsonify(api.get_job_report(app_id=app_id,
+                                      detailed=False)), 200
+
+@rest.get('/monitoring/<app_id>/report/detailed')
+def get_detailed_report(app_id):
+    return jsonify(api.get_job_report(app_id=app_id,
+                                      detailed=True)), 200
 
 @rest.post('/plugins')
 def install_plugin(data):

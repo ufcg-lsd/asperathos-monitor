@@ -55,14 +55,17 @@ def stop_monitoring(app_id):
     # Stop the plugin and remove from the data structure
     monitored_apps.pop(app_id, None).stop()
 
-def get_job_report(app_id):
+def get_job_report(app_id, detailed):
     if app_id not in monitored_apps:
         API_LOG.log("App doesn't exist")
         raise ex.BadRequestException()
 
     job = monitored_apps[app_id]
     if job.job_is_completed():
-        return job.job_report.to_dict()
+        if detailed:
+            return job.get_detailed_report()
+        else:
+            return job.job_report.to_dict()
     return {'message': 'Job is running yet!'}
 
 def install_plugin(source, plugin):

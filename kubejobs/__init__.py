@@ -54,12 +54,14 @@ class KubeJobProgress(Plugin):
         self.current_job_id = 0
         self.job_report = JobReport(info_plugin)
         self.report_flag = True
+        self.flag = True
         self.last_replicas = last_replicas
         self.last_error = None
         self.last_progress = None
         kubernetes.config.load_kube_config(api.k8s_manifest)
         self.b_v1 = kubernetes.client.BatchV1Api()
         self.datasource = self.setup_datasource(info_plugin)
+
     
     def get_dimensions(self):
         return {'application_id': self.app_id,
@@ -89,10 +91,10 @@ class KubeJobProgress(Plugin):
                 raise ex.BadRequestException("Unknown datasource type...!")
 
     def calculate_measurement(self, jobs_completed):
-        job_progress = self.get_job_progress(jobs_completed)
+        job_progress = self.get_job_progress(jobs_completed) or self.last_progress
         ref_value = self.get_ref_value()
-        replicas = self._get_num_replicas()       
-        error = self.get_error(job_progress, ref_value)
+        replicas = self._get_num_replicas() or self.last_replicas  
+        error = self.get_error(job_progress, ref_value) or self.last_error
         
         return job_progress, ref_value, replicas, error
 
@@ -111,7 +113,7 @@ class KubeJobProgress(Plugin):
         return job_progress
 
     def get_parallelism_manifest(self, replicas, timestamp):
-        parallelism = {'name': 'job-parallelism',
+        parallelism = {'name': 'job_parallelism',
                        'value': replicas,
                        'timestamp': timestamp,
                        'dimensions': self.dimensions
@@ -119,7 +121,7 @@ class KubeJobProgress(Plugin):
         return parallelism
 
     def get_time_progress_error_manifest(self, ref_value, timestamp):
-        time_progress_error = {'name': 'time-progress',
+        time_progress_error = {'name': 'time_progress',
                               'value': ref_value,
                               'timestamp': timestamp,
                               'dimensions': self.dimensions
@@ -128,50 +130,56 @@ class KubeJobProgress(Plugin):
         return time_progress_error
 
     def get_job_progress_error_manifest(self, job_progress, timestamp):
-        job_progress_error = {'name': 'job-progress',
+        job_progress_error = {'name': 'job_progress',
                               'value': job_progress,
                               'timestamp': timestamp,
                               'dimensions': self.dimensions
                              }
         return job_progress_error
     def get_application_progress_error_manifest(self, error, timestamp):
-        application_progress_error = {'name': 'application-progress.error',
+        application_progress_error = {'name': 'application_progress_error',
                                       'value': error,
                                       'timestamp': timestamp,
                                       'dimensions': self.dimensions
                                      }
         return application_progress_error
 
+    def get_detailed_report(self):
+        if self.report_flag:
+            return self.datasource.get_measurements()
+        return {'message': 'Job is running yet!'}
+
     def _publish_measurement(self, jobs_completed):
 
-        self.LOG.log("Jobs Completed: %i" % jobs_completed)
-        job_progress, ref_value, replicas, error = \
-            self.calculate_measurement(jobs_completed)
-        
-        self.last_progress = job_progress
-        timestamp = time.time() * 1000
-        application_progress_error = \
-            self.get_application_progress_error_manifest(error, timestamp)
-        
-        self.rds.rpush(self.metric_queue,
-                       str(application_progress_error))
-        
-        if self.enable_visualizer:
-            job_progress_error = \
-                self.get_job_progress_error_manifest(job_progress, timestamp)
-            time_progress_error = \
-                self.get_time_progress_error_manifest(ref_value, timestamp)
-            parallelism = \
-                self.get_parallelism_manifest(replicas, timestamp)
-        
-            self.LOG.log("Error: %s " % application_progress_error['value'])
-        
-            self.publish_visualizer_measurement(application_progress_error,
-                                                job_progress_error,
-                                                time_progress_error,
-                                                parallelism)   
-        self.report_job()
-        time.sleep(MONITORING_INTERVAL)
+        if self.report_flag:
+            self.LOG.log("Jobs Completed: %i" % jobs_completed)
+            job_progress, ref_value, replicas, error = \
+                self.calculate_measurement(jobs_completed)
+            
+            self.last_progress = job_progress
+            timestamp = time.time() * 1000
+            application_progress_error = \
+                self.get_application_progress_error_manifest(error, timestamp)
+            
+            self.rds.rpush(self.metric_queue,
+                        str(application_progress_error))
+            
+            if self.enable_visualizer:
+                job_progress_error = \
+                    self.get_job_progress_error_manifest(job_progress, timestamp)
+                time_progress_error = \
+                    self.get_time_progress_error_manifest(ref_value, timestamp)
+                parallelism = \
+                    self.get_parallelism_manifest(replicas, timestamp)
+            
+                self.LOG.log("Error: %s " % application_progress_error['value'])
+            
+                self.publish_visualizer_measurement(application_progress_error,
+                                                    job_progress_error,
+                                                    time_progress_error,
+                                                    parallelism)   
+            self.report_job()
+            time.sleep(MONITORING_INTERVAL)
 
     def publish_visualizer_measurement(self, application_progress_error,
                                        job_progress_error,
@@ -189,9 +197,13 @@ class KubeJobProgress(Plugin):
             self.job_report.verify_and_set_max_error(self.last_error, current_time)
             self.job_report.verify_and_set_min_error(self.last_error, current_time)
 
-            if self.last_progress == 1 or self.job_is_completed():
-                self.report_flag = False
-                self.generate_report()
+            if self.job_is_completed():
+                if self.last_progress != 1 and self.flag:
+                    self.flag = False
+                    self.monitoring_application()
+                else:
+                    self.report_flag = False
+                    self.generate_report()
 
     def generate_report(self, current_time=str(datetime.now())):
             self.job_report.set_final_error(self.last_error, current_time)

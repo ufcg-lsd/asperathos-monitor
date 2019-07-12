@@ -189,19 +189,19 @@ class TestKubeJobs(unittest.TestCase):
 
         plugin._publish_measurement(5000)
 
-        self.assertEqual(len(plugin.datasource.metrics['time-progress']), 1)
-        self.assertEqual(len(plugin.datasource.metrics['job-progress']), 1)
+        self.assertEqual(len(plugin.datasource.metrics['time_progress']), 1)
+        self.assertEqual(len(plugin.datasource.metrics['job_progress']), 1)
         self.assertEqual(
-            len(plugin.datasource.metrics['application-progress.error']), 1)
-        self.assertEqual(len(plugin.datasource.metrics['job-parallelism']), 1)
+            len(plugin.datasource.metrics['application_progress_error']), 1)
+        self.assertEqual(len(plugin.datasource.metrics['job_parallelism']), 1)
 
         plugin._publish_measurement(1000)
 
-        self.assertEqual(len(plugin.datasource.metrics['time-progress']), 2)
-        self.assertEqual(len(plugin.datasource.metrics['job-progress']), 2)
+        self.assertEqual(len(plugin.datasource.metrics['time_progress']), 2)
+        self.assertEqual(len(plugin.datasource.metrics['job_progress']), 2)
         self.assertEqual(
-            len(plugin.datasource.metrics['application-progress.error']), 2)
-        self.assertEqual(len(plugin.datasource.metrics['job-parallelism']), 2)
+            len(plugin.datasource.metrics['application_progress_error']), 2)
+        self.assertEqual(len(plugin.datasource.metrics['job_parallelism']), 2)
 
     def test_wrong_request_body(self):
         """
