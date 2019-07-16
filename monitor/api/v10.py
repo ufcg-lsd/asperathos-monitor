@@ -21,37 +21,55 @@ from monitor.utils import api as u
 rest = u.Rest('v10', __name__)
 
 
-""" Start monitoring a running application.
+@rest.post('/monitoring/<app_id>')
+def start_monitoring(data, app_id):
+    """ Start monitoring a running application.
 
     Normal response codes: 202
     Error response codes: 400
-"""
-@rest.post('/monitoring/<app_id>')
-def start_monitoring(data, app_id):
+    """
     return u.render(api.start_monitoring(data, app_id))
 
 
-""" Stop monitoring a running application.
+@rest.put('/monitoring/<app_id>/stop')
+def stop_monitoring(app_id, data):
+    """ Stop monitoring a running application.
 
     Normal response codes: 204
     Error response codes: 400
-"""
-@rest.put('/monitoring/<app_id>/stop')
-def stop_monitoring(app_id, data):
+    """
     return u.render(api.stop_monitoring(app_id))
+
 
 @rest.get('/monitoring/<app_id>/report')
 def get_job_report(app_id):
+    """ Return a simple report of the job.
+
+    Normal response codes: 200
+    Error response codes: 400
+    """
     return jsonify(api.get_job_report(app_id=app_id,
                                       detailed=False)), 200
 
+
 @rest.get('/monitoring/<app_id>/report/detailed')
 def get_detailed_report(app_id):
+    """ Return a detailed report of the job.
+
+    Normal response codes: 200
+    Error response codes: 400
+    """
     return jsonify(api.get_job_report(app_id=app_id,
                                       detailed=True)), 200
 
+
 @rest.post('/plugins')
 def install_plugin(data):
+    """ Installs a plugin from data
+
+    Normal response codes: 200
+    Error response codes: 400
+    """
     plugin = data.get('plugin_source')
     source = data.get('install_source')
     response, status = api.install_plugin(plugin, source)

@@ -16,9 +16,9 @@
 
 class JobReport():
 
-    def __init__(self, info_plugin, max_error=(None,None),
-                 min_error=(None,None), final_replicas=None,
-                 final_error=(None,None)):
+    def __init__(self, info_plugin, max_error=(None, None),
+                 min_error=(None, None), final_replicas=None,
+                 final_error=(None, None)):
 
         self.scaling_strategy = info_plugin['scaling_strategy']
         self.heuristic_options = self.get_heuristic_options(info_plugin)
@@ -26,7 +26,7 @@ class JobReport():
         self.min_error = min_error
         self.final_replicas = final_replicas
         self.final_error = final_error
-    
+
     def to_dict(self):
         report = {
             'scaling_strategy': self.scaling_strategy,
@@ -48,7 +48,7 @@ class JobReport():
 
     def verify_and_set_max_error(self, current_error, current_time):
 
-        if self.max_error[0] != None:
+        if self.max_error[0] is not None:
             if current_error > self.max_error[0]:
                 self.max_error = (current_error, current_time)
         else:
@@ -59,12 +59,12 @@ class JobReport():
 
     def verify_and_set_min_error(self, current_error, current_time):
 
-        if self.min_error[0] != None:
+        if self.min_error[0] is not None:
             if current_error < self.min_error[0]:
                 self.min_error = (current_error, current_time)
         else:
             self.min_error = (current_error, current_time)
-    
+
     def get_final_replicas(self):
         return self.final_replicas
 
@@ -83,23 +83,24 @@ class JobReport():
         min_error = self.get_min_error()
         final_error = self.get_final_error()
         final_replicas = self.get_final_replicas()
-        
+
         prefix = 'default_reports/'
         if self.scaling_strategy == 'pid':
             prefix = 'pid_reports/'
-        
-        f = open(prefix + job_id + "_report","w+")
+
+        f = open(prefix + job_id + "_report", "w+")
 
         f.write("Report Job " + str(job_id) + "\n")
         f.write("Scaling Strategy: " + self.scaling_strategy + '\n\n')
         f.write('Heuristics: ' + str(self.heuristic_options) + '\n')
-        f.write("Max Error: " + str(max_error[0]) + " Timestamp: " + str(max_error[1]) + "\n")
-        f.write("Min Error: " + str(min_error[0]) + " Timestamp: " + str(min_error[1]) + "\n")
-        f.write("Final Error: " + str(final_error[0]) + " Timestamp: " + str(final_error[1]) + "\n")
-        f.write("Final Replicas: " + str(final_replicas) + " Timestamp: " + str(final_error[1]) + "\n")
+        f.write("Max Error: " + str(max_error[0]) +
+                " Timestamp: " + str(max_error[1]) + "\n")
+        f.write("Min Error: " + str(min_error[0]) +
+                " Timestamp: " + str(min_error[1]) + "\n")
+        f.write("Final Error: " + str(final_error[0]) +
+                " Timestamp: " + str(final_error[1]) + "\n")
+        f.write("Final Replicas: " + str(final_replicas) +
+                " Timestamp: " + str(final_error[1]) + "\n")
         f.write("\n\n --------- END ----------")
-        
+
         f.close()
-    
-
-

@@ -29,37 +29,43 @@ class InfluxConnector:
         self._get_influx_client()
 
     def get_measurements(self):
-        
+
         out = {}
         for i in self.get_job_progress():
             out[i['time']] = {'job_progress': i['value']}
-        
+
         for i in self.get_time_progress():
             out[i['time']].update({'time_progress': i['value']})
 
         for i in self.get_replicas():
             out[i['time']].update({'replicas': i['value']})
-        
+
         for i in self.get_error():
             out[i['time']].update({'error': i['value']})
-        
+
         return out
 
     def get_job_progress(self):
-        result = self._get_influx_client().query('select value from job_progress;')
+        result = self._get_influx_client().\
+            query('select value from job_progress;')
         return list(result.get_points(measurement='job_progress'))
-    
+
     def get_time_progress(self):
-        result = self._get_influx_client().query('select value from time_progress;')
+        result = self._get_influx_client().\
+            query('select value from time_progress;')
         return list(result.get_points(measurement='time_progress'))
-    
+
     def get_replicas(self):
-        result = self._get_influx_client().query('select value from job_parallelism;')
+        result = self._get_influx_client().\
+            query('select value from job_parallelism;')
         return list(result.get_points(measurement='job_parallelism'))
-    
+
     def get_error(self):
-        result = self._get_influx_client().query('select value from application_progress_error;')
-        return list(result.get_points(measurement='application_progress_error'))
+        result = self._get_influx_client().\
+            query('select value from application_progress_error;')
+        return \
+            list(result.
+                 get_points(measurement='application_progress_error'))
 
     def first_measurement(self, name, dimensions):
         pass

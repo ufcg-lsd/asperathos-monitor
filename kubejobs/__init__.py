@@ -44,7 +44,7 @@ class KubeJobProgress(Plugin):
                         collect_period, retries=retries)
         self.validate(info_plugin)
         self.LOG = Log(LOG_NAME, LOG_FILE)
-        self.enable_visualizer = info_plugin['enable_visualizer']
+        self.enable_detailed_report = info_plugin['enable_detailed_report']
         self.expected_time = int(info_plugin['expected_time'])
         self.number_of_jobs = int(info_plugin['number_of_jobs'])
         self.submission_time = self.get_submission_time(info_plugin)
@@ -62,21 +62,20 @@ class KubeJobProgress(Plugin):
         self.b_v1 = kubernetes.client.BatchV1Api()
         self.datasource = self.setup_datasource(info_plugin)
 
-    
     def get_dimensions(self):
         return {'application_id': self.app_id,
                 'service': 'kubejobs'}
-    
+
     def get_submission_time(self, info_plugin):
         return datetime.strptime(info_plugin['submission_time'],
                                  '%Y-%m-%dT%H:%M:%S.%fGMT')
-        
+
     def setup_redis(self, info_plugin):
         return redis.StrictRedis(host=info_plugin['redis_ip'],
                                  port=info_plugin['redis_port'])
 
     def setup_datasource(self, info_plugin):
-        if self.enable_visualizer:
+        if self.enable_detailed_report:
             datasource_type = info_plugin['datasource_type']
             if datasource_type == "monasca":
                 return MonascaConnector()
@@ -91,11 +90,12 @@ class KubeJobProgress(Plugin):
                 raise ex.BadRequestException("Unknown datasource type...!")
 
     def calculate_measurement(self, jobs_completed):
-        job_progress = self.get_job_progress(jobs_completed) or self.last_progress
+        job_progress = \
+            self.get_job_progress(jobs_completed) or self.last_progress
         ref_value = self.get_ref_value()
-        replicas = self._get_num_replicas() or self.last_replicas  
+        replicas = self._get_num_replicas() or self.last_replicas
         error = self.get_error(job_progress, ref_value) or self.last_error
-        
+
         return job_progress, ref_value, replicas, error
 
     def get_error(self, job_progress, ref_value):
@@ -107,7 +107,7 @@ class KubeJobProgress(Plugin):
         elapsed_time = float(self._get_elapsed_time())
         ref_value = (elapsed_time / self.expected_time)
         return ref_value
-        
+
     def get_job_progress(self, jobs_completed):
         job_progress = min(1.0, (float(jobs_completed) / self.number_of_jobs))
         return job_progress
@@ -117,15 +117,15 @@ class KubeJobProgress(Plugin):
                        'value': replicas,
                        'timestamp': timestamp,
                        'dimensions': self.dimensions
-                      }
+                       }
         return parallelism
 
     def get_time_progress_error_manifest(self, ref_value, timestamp):
         time_progress_error = {'name': 'time_progress',
-                              'value': ref_value,
-                              'timestamp': timestamp,
-                              'dimensions': self.dimensions
-                              }
+                               'value': ref_value,
+                               'timestamp': timestamp,
+                               'dimensions': self.dimensions
+                               }
 
         return time_progress_error
 
@@ -134,18 +134,19 @@ class KubeJobProgress(Plugin):
                               'value': job_progress,
                               'timestamp': timestamp,
                               'dimensions': self.dimensions
-                             }
+                              }
         return job_progress_error
+
     def get_application_progress_error_manifest(self, error, timestamp):
         application_progress_error = {'name': 'application_progress_error',
                                       'value': error,
                                       'timestamp': timestamp,
                                       'dimensions': self.dimensions
-                                     }
+                                      }
         return application_progress_error
 
     def get_detailed_report(self):
-        if self.report_flag:
+        if not self.report_flag:
             return self.datasource.get_measurements()
         return {'message': 'Job is running yet!'}
 
@@ -155,29 +156,31 @@ class KubeJobProgress(Plugin):
             self.LOG.log("Jobs Completed: %i" % jobs_completed)
             job_progress, ref_value, replicas, error = \
                 self.calculate_measurement(jobs_completed)
-            
+
             self.last_progress = job_progress
             timestamp = time.time() * 1000
             application_progress_error = \
                 self.get_application_progress_error_manifest(error, timestamp)
-            
+
             self.rds.rpush(self.metric_queue,
-                        str(application_progress_error))
-            
-            if self.enable_visualizer:
+                           str(application_progress_error))
+
+            if self.enable_detailed_report:
                 job_progress_error = \
-                    self.get_job_progress_error_manifest(job_progress, timestamp)
+                    self.get_job_progress_error_manifest(job_progress,
+                                                         timestamp)
                 time_progress_error = \
-                    self.get_time_progress_error_manifest(ref_value, timestamp)
+                    self.get_time_progress_error_manifest(ref_value,
+                                                          timestamp)
                 parallelism = \
                     self.get_parallelism_manifest(replicas, timestamp)
-            
-                self.LOG.log("Error: %s " % application_progress_error['value'])
-            
+
+                self.LOG.log("Error: %s " %
+                             application_progress_error['value'])
                 self.publish_visualizer_measurement(application_progress_error,
                                                     job_progress_error,
                                                     time_progress_error,
-                                                    parallelism)   
+                                                    parallelism)
             self.report_job()
             time.sleep(MONITORING_INTERVAL)
 
@@ -185,7 +188,6 @@ class KubeJobProgress(Plugin):
                                        job_progress_error,
                                        time_progress_error,
                                        parallelism):
-        
         self.datasource.send_metrics([application_progress_error])
         self.datasource.send_metrics([job_progress_error])
         self.datasource.send_metrics([time_progress_error])
@@ -194,8 +196,10 @@ class KubeJobProgress(Plugin):
     def report_job(self):
         if self.report_flag:
             current_time = str(datetime.now())
-            self.job_report.verify_and_set_max_error(self.last_error, current_time)
-            self.job_report.verify_and_set_min_error(self.last_error, current_time)
+            self.job_report.\
+                verify_and_set_max_error(self.last_error, current_time)
+            self.job_report.\
+                verify_and_set_min_error(self.last_error, current_time)
 
             if self.job_is_completed():
                 if self.last_progress != 1 and self.flag:
@@ -206,17 +210,18 @@ class KubeJobProgress(Plugin):
                     self.generate_report()
 
     def generate_report(self, current_time=str(datetime.now())):
-            self.job_report.set_final_error(self.last_error, current_time)
-            self.job_report.set_final_replicas(self.last_replicas)
-            self.job_report.generate_report(self.app_id)
+        self.job_report.set_final_error(self.last_error, current_time)
+        self.job_report.set_final_replicas(self.last_replicas)
+        self.job_report.generate_report(self.app_id)
 
     def _get_num_replicas(self):
         job = self.b_v1.read_namespaced_job(
             name=self.app_id, namespace="default")
         replicas = job.status.active
-        if replicas is not None: self.last_replicas = replicas
+        if replicas is not None:
+            self.last_replicas = replicas
         return replicas
-    
+
     def job_is_completed(self):
 
         job = self.b_v1.read_namespaced_job(
@@ -254,7 +259,7 @@ class KubeJobProgress(Plugin):
 
     def validate(self, data):
         data_model = {
-            "enable_visualizer": bool,
+            "enable_detailed_report": bool,
             "expected_time": int,
             "number_of_jobs": int,
             "redis_ip": six.string_types,
@@ -263,10 +268,10 @@ class KubeJobProgress(Plugin):
             "scaling_strategy": six.string_types
         }
 
-        if 'enable_visualizer' in data and data['enable_visualizer']:
+        if 'enable_detailed_report' in data and data['enable_detailed_report']:
             data_model.update({"datasource_type": six.string_types,
                                "database_data": dict
-                              })
+                               })
 
         if 'scaling_strategy' in data and data['scaling_strategy'] == 'pid':
             data_model.update({"heuristic_options": dict})
@@ -280,5 +285,6 @@ class KubeJobProgress(Plugin):
                 raise ex.BadRequestException(
                     "\"{}\" has unexpected variable type: {}. Was expecting {}"
                     .format(key, type(data[key]), data_model[key]))
+
 
 PLUGIN = KubeJobProgress

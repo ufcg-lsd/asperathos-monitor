@@ -26,7 +26,6 @@ from monitor.tests.mocks.mock_monasca import MockMonascaConnector
 from monitor.tests.mocks.mock_redis import MockRedis
 
 
-
 class TestKubeJobs(unittest.TestCase):
 
     def setUp(self):
@@ -42,7 +41,7 @@ class TestKubeJobs(unittest.TestCase):
             "submission_time": "2017-04-11T00:00:00.0003GMT",
             "redis_ip": "192.168.0.0",
             "redis_port": 5000,
-            "enable_visualizer": True,
+            "enable_detailed_report": True,
             "datasource_type": "influxdb",
             "scaling_strategy": 'default',
             "database_data": {'url': '123123.com',
