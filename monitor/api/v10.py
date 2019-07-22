@@ -45,5 +45,5 @@ def stop_monitoring(app_id, data):
 def install_plugin(data):
     plugin = data.get('plugin_source')
     source = data.get('install_source')
-    response, status = api.install_plugin(plugin, source)
+    response, status = api.install_plugin(source, plugin)
     return jsonify(response), status
