@@ -20,8 +20,9 @@ class JobReport():
                  min_error=(None, None), final_replicas=None,
                  final_error=(None, None)):
 
-        self.scaling_strategy = info_plugin['scaling_strategy']
-        self.heuristic_options = self.get_heuristic_options(info_plugin)
+        self.info_plugin = info_plugin
+        self.scaling_strategy = self.info_plugin['scaling_strategy']
+        self.heuristic_options = self.get_heuristic_options()
         self.max_error = max_error
         self.min_error = min_error
         self.final_replicas = final_replicas
@@ -39,9 +40,9 @@ class JobReport():
 
         return report
 
-    def get_heuristic_options(self, info_plugin):
+    def get_heuristic_options(self):
         if self.scaling_strategy == 'pid':
-            return info_plugin['heuristic_options']
+            return self.info_plugin['heuristic_options']
 
     def get_max_error(self):
         return self.max_error

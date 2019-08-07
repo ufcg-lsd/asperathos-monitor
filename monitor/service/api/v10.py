@@ -62,7 +62,7 @@ def get_job_report(app_id, detailed):
         raise ex.BadRequestException()
 
     job = monitored_apps[app_id]
-    if job.job_is_completed():
+    if not job.report_flag:
         if detailed:
             return job.get_detailed_report()
         else:

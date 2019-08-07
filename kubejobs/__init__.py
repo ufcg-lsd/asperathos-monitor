@@ -177,14 +177,14 @@ class KubeJobProgress(Plugin):
 
                 self.LOG.log("Error: %s " %
                              application_progress_error['value'])
-                self.publish_visualizer_measurement(application_progress_error,
+                self.publish_persistent_measurement(application_progress_error,
                                                     job_progress_error,
                                                     time_progress_error,
                                                     parallelism)
             self.report_job()
             time.sleep(MONITORING_INTERVAL)
 
-    def publish_visualizer_measurement(self, application_progress_error,
+    def publish_persistent_measurement(self, application_progress_error,
                                        job_progress_error,
                                        time_progress_error,
                                        parallelism):
@@ -206,8 +206,8 @@ class KubeJobProgress(Plugin):
                     self.flag = False
                     self.monitoring_application()
                 else:
-                    self.report_flag = False
                     self.generate_report()
+                    self.report_flag = False
 
     def generate_report(self, current_time=str(datetime.now())):
         self.job_report.set_final_error(self.last_error, current_time)
