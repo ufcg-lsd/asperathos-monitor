@@ -34,7 +34,9 @@ def start_monitoring(data, app_id):
         API_LOG.log("Missing parameters in request")
         raise ex.BadRequestException()
 
-    plugin = data['plugin']
+    API_LOG.log(data)
+
+    plugin = data['plugin']['module']
     plugin_info = data['plugin_info']
 
     if app_id not in monitored_apps:
