@@ -19,7 +19,7 @@ import unittest
 
 
 from monitor import exceptions as ex
-from monitor.plugins.kubejobs.plugin import KubeJobProgress
+from kubejobs import KubeJobProgress
 from monitor.tests.mocks.mock_influx import MockInfluxConnector
 from monitor.tests.mocks.mock_k8s import MockKube
 from monitor.tests.mocks.mock_monasca import MockMonascaConnector
@@ -41,8 +41,13 @@ class TestKubeJobs(unittest.TestCase):
             "submission_time": "2017-04-11T00:00:00.0003GMT",
             "redis_ip": "192.168.0.0",
             "redis_port": 5000,
-            "enable_visualizer": True,
-            "datasource_type": "influxfb"
+            "enable_detailed_report": True,
+            "datasource_type": "influxdb",
+            "scaling_strategy": 'default',
+            "database_data": {'url': '123123.com',
+                              'port': 1231,
+                              'name': 'job-influx'
+                              }
         }
 
         self.collect_period = 5
@@ -60,7 +65,6 @@ class TestKubeJobs(unittest.TestCase):
         Returns: None
         """
         mock_config.return_value = None
-
         plugin = KubeJobProgress(self.app_id, self.info_plugin,
                                  self.collect_period, self.retries)
 
@@ -184,19 +188,19 @@ class TestKubeJobs(unittest.TestCase):
 
         plugin._publish_measurement(5000)
 
-        self.assertEqual(len(plugin.datasource.metrics['time-progress']), 1)
-        self.assertEqual(len(plugin.datasource.metrics['job-progress']), 1)
+        self.assertEqual(len(plugin.datasource.metrics['time_progress']), 1)
+        self.assertEqual(len(plugin.datasource.metrics['job_progress']), 1)
         self.assertEqual(
-            len(plugin.datasource.metrics['application-progress.error']), 1)
-        self.assertEqual(len(plugin.datasource.metrics['job-parallelism']), 1)
+            len(plugin.datasource.metrics['application_progress_error']), 1)
+        self.assertEqual(len(plugin.datasource.metrics['job_parallelism']), 1)
 
         plugin._publish_measurement(1000)
 
-        self.assertEqual(len(plugin.datasource.metrics['time-progress']), 2)
-        self.assertEqual(len(plugin.datasource.metrics['job-progress']), 2)
+        self.assertEqual(len(plugin.datasource.metrics['time_progress']), 2)
+        self.assertEqual(len(plugin.datasource.metrics['job_progress']), 2)
         self.assertEqual(
-            len(plugin.datasource.metrics['application-progress.error']), 2)
-        self.assertEqual(len(plugin.datasource.metrics['job-parallelism']), 2)
+            len(plugin.datasource.metrics['application_progress_error']), 2)
+        self.assertEqual(len(plugin.datasource.metrics['job_parallelism']), 2)
 
     def test_wrong_request_body(self):
         """
