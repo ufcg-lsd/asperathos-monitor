@@ -31,12 +31,12 @@ pipeline {
   }
   post {
     cleanup {
-      labelledShell script: 'docker stop docker-monitor-$BUILD_ID', label: "Stop Docker container"
-      labelledShell script: 'docker rm -v docker-monitor-$BUILD_ID', label: "Remove Docker container"
-      labelledShell script: 'docker rm -v integration-tests-monitor-$BUILD_ID', label: "Remove integration tests container"
-      labelledShell script: 'docker network rm network-monitor-$BUILD_ID', label: "Remove test network"
-      labelledShell script: 'docker volume rm d54-data-monitor-$BUILD_ID', label: "Remove D5.4 volume"
-      labelledShell script: 'docker volume rm organon-data-monitor-$BUILD_ID', label: "Remove Organon volume"
+      labelledShell script: 'docker stop docker-monitor-$BUILD_ID || true', label: "Stop Docker container"
+      labelledShell script: 'docker rm -v docker-monitor-$BUILD_ID || true', label: "Remove Docker container"
+      labelledShell script: 'docker rm -v integration-tests-monitor-$BUILD_ID || true', label: "Remove integration tests container"
+      labelledShell script: 'docker network rm network-monitor-$BUILD_ID || true', label: "Remove test network"
+      labelledShell script: 'docker volume rm d54-data-monitor-$BUILD_ID || true', label: "Remove D5.4 volume"
+      labelledShell script: 'docker volume rm organon-data-monitor-$BUILD_ID || true', label: "Remove Organon volume"
     }
   }
 }
