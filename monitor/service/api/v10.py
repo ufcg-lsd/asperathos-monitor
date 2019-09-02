@@ -40,7 +40,11 @@ def start_monitoring(data, app_id):
     plugin_info = data['plugin_info']
 
     if app_id not in monitored_apps:
-        executor = plugin_service.get_plugin(plugin)(app_id, plugin_info)
+        try:
+            executor = plugin_service.get_plugin(plugin)(app_id, plugin_info)
+        except ImportError:
+            plugin_service.install_plugin(data['plugin']['source'], data['plugin']['plugin_source'])
+            executor = plugin_service.get_plugin(plugin)(app_id, plugin_info)
         monitored_apps[app_id] = executor
         executor.start()
 
