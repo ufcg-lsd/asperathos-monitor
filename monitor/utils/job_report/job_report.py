@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 
+
 class JobReport():
 
     def __init__(self, info_plugin, max_error=(None, None),
@@ -91,7 +92,7 @@ class JobReport():
 
         if not os.path.exists(prefix):
             os.mkdir(prefix)
-            
+
         f = open(prefix + job_id + "_report", "w+")
 
         f.write("Report Job " + str(job_id) + "\n")
