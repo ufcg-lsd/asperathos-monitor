@@ -8,3 +8,5 @@ bigsea_key
 *.egg-info/
 data/conf
 data/clusters
+default_reports/
+pid_reports/

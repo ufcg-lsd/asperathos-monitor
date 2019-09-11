@@ -12,7 +12,7 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 
 class JobReport():
 
@@ -85,10 +85,13 @@ class JobReport():
         final_error = self.get_final_error()
         final_replicas = self.get_final_replicas()
 
-        prefix = 'default_reports/'
+        prefix = './default_reports/'
         if self.scaling_strategy == 'pid':
-            prefix = 'pid_reports/'
+            prefix = './pid_reports/'
 
+        if not os.path.exists(prefix):
+            os.mkdir(prefix)
+            
         f = open(prefix + job_id + "_report", "w+")
 
         f.write("Report Job " + str(job_id) + "\n")
