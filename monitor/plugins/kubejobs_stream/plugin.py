@@ -41,7 +41,7 @@ class KubeJobProgress(Plugin):
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
         self.validate(info_plugin)
-        self.LOG = Log(LOG_NAME, LOG_FILE) 
+        self.LOG = Log(LOG_NAME, LOG_FILE)
         self.enable_detailed_report = info_plugin['enable_detailed_report']
         self.expected_time = int(info_plugin['expected_time'])
         self.number_of_jobs = int(info_plugin['number_of_jobs'])
@@ -52,10 +52,11 @@ class KubeJobProgress(Plugin):
         self.current_job_id = 0
         self.job_report = JobReport(info_plugin)
         self.report_flag = True
-        self.enable_generate_job_report = False
         self.last_replicas = last_replicas
-        self.last_error = 0
-        self.last_progress = 0
+        self.last_error = 0.0
+        self.last_timestamp = time.time() * 1000
+        self.max_rep = int(info_plugin['max_replicas'])
+        self.min_rep = int(info_plugin['min_replicas'])
         kubernetes.config.load_kube_config(api.k8s_manifest)
         self.b_v1 = kubernetes.client.BatchV1Api()
         self.datasource = self.setup_datasource(info_plugin)
@@ -88,7 +89,7 @@ class KubeJobProgress(Plugin):
                 raise ex.BadRequestException("Unknown datasource type...!")
 
     def get_time_to_complete(self, item_key):
-        item_q_key = "job:"+ item_key
+        item_q_key = "job:" + item_key
         item_start_time_q_key = item_q_key + ":start_time"
         item_end_time_q_key = item_q_key + ":end_time"
         item_completed_start_time = float(self.rds.get(item_start_time_q_key))
@@ -96,14 +97,17 @@ class KubeJobProgress(Plugin):
 
         time_to_complete = item_completed_end_time - item_completed_start_time
 
-
         return time_to_complete
 
-    def get_error(self, time_to_complete):
-        error = (self.expected_time - time_to_complete)/self.expected_time
+    def get_error(self, time_to_complete, n_processing_jobs,
+                  replicas, main_q_size):
+
+        time_std = (self.expected_time - time_to_complete)/self.expected_time
+        error = time_std*min(1, main_q_size)
+        error += float((replicas - n_processing_jobs))/self.max_rep
         self.last_error = error
         return error
-        
+
     def get_parallelism_manifest(self, replicas, timestamp):
         parallelism = {'name': 'job_parallelism',
                        'value': replicas,
@@ -114,10 +118,10 @@ class KubeJobProgress(Plugin):
 
     def get_expected_time_manifest(self, expected_time, timestamp):
         expected_time_manifest = {'name': 'time_progress',
-                               'value': expected_time,
-                               'timestamp': timestamp,
-                               'dimensions': self.dimensions
-                               }
+                                  'value': expected_time,
+                                  'timestamp': timestamp,
+                                  'dimensions': self.dimensions
+                                  }
 
         return expected_time_manifest
 
@@ -130,7 +134,7 @@ class KubeJobProgress(Plugin):
         return real_time_manifest
 
     def get_application_progress_error_manifest(self, error, timestamp):
-        application_progress_error = {'name': 'application_progress.error',
+        application_progress_error = {'name': 'application_progress_error',
                                       'value': error,
                                       'timestamp': timestamp,
                                       'dimensions': self.dimensions
@@ -144,15 +148,11 @@ class KubeJobProgress(Plugin):
 
     def _publish_measurement(self, items_completed):
         if self.report_flag:
-            self.LOG.log("Items Completed: %i" % items_completed)
 
-            job_progress = items_completed
-            replicas = self._get_num_replicas() or self.last_replicas
-            
             # doing this here because i need to check if
             # the is a completed job so the rest don't crash
             job_result_key = "job:results"
-            last_item_key = self.rds.lrange(job_result_key,-1,-1)
+            last_item_key = self.rds.lrange(job_result_key, -1, -1)
             self.LOG.log(last_item_key)
 
             if (not last_item_key):
@@ -161,18 +161,35 @@ class KubeJobProgress(Plugin):
             last_item_key = last_item_key[0]
 
             time_to_complete = self.get_time_to_complete(last_item_key)
+            main_q_size = self.rds.llen('job')
 
-            error = self.get_error(time_to_complete) or self.last_error
+            replicas = self._get_num_replicas() or self.last_replicas
+            num_processing_jobs = self.rds.llen('job:processing')
+            num_processing_jobs = min(num_processing_jobs, replicas)
 
-            self.last_progress = job_progress
-
+            error = self.get_error(time_to_complete, num_processing_jobs,
+                                   replicas, main_q_size) or self.last_error
             timestamp = time.time() * 1000
-            
-            self.LOG.log("\n========================\nError: %s\nReal-time: %s"
-                         "\nExpected-time: %s\nReplicas: %s"
-                         "\n========================"
-                % (error, time_to_complete, self.expected_time, replicas))
-        
+
+            if (main_q_size == 0 and num_processing_jobs == 0 and
+                    replicas == self.min_rep):
+
+                timestamp = self.last_timestamp
+
+            self.last_timestamp = timestamp
+            self.LOG.log("========================")
+            self.LOG.log("Items Completed: %i" % items_completed)
+            self.LOG.log("Error: %s" % error)
+            self.LOG.log("Real-time: %s" % time_to_complete)
+            self.LOG.log("Expected-time: %s" % self.expected_time)
+            self.LOG.log("Replicas: %s" % replicas)
+            self.LOG.log("Queue size: %s" % main_q_size)
+            self.LOG.log("Pods Processins: %s" % num_processing_jobs)
+            tracked_items = num_processing_jobs + items_completed
+            tracked_items += main_q_size
+            self.LOG.log("Tracked items : %s" % (tracked_items))
+            self.LOG.log("========================")
+
             application_progress_error = \
                 self.get_application_progress_error_manifest(error, timestamp)
 
@@ -181,17 +198,13 @@ class KubeJobProgress(Plugin):
 
             if self.enable_detailed_report:
                 job_progress_error = \
-                    self.get_real_time_manifest(time_to_complete,
-                                                         timestamp)
+                    self.get_real_time_manifest(error,
+                                                timestamp)
                 time_progress_error = \
                     self.get_expected_time_manifest(self.expected_time,
-                                                          timestamp)
+                                                    timestamp)
                 parallelism = \
                     self.get_parallelism_manifest(replicas, timestamp)
-
-                self.LOG.log("Error: %s " %
-                             application_progress_error['value'])
-
                 self.publish_persistent_measurement(application_progress_error,
                                                     job_progress_error,
                                                     time_progress_error,
@@ -214,15 +227,9 @@ class KubeJobProgress(Plugin):
                 verify_and_set_max_error(self.last_error, current_time)
             self.job_report.\
                 verify_and_set_min_error(self.last_error, current_time)
-
-            if self.job_is_completed():
-                if self.last_progress != 1 \
-                        and not self.enable_generate_job_report:
-                    self.enable_generate_job_report = True
-                    self.monitoring_application()
-                else:
-                    self.generate_report()
-                    self.report_flag = False
+            if self.job_is_active():
+                self.generate_report()
+                self.report_flag = False
 
     def generate_report(self, current_time=str(datetime.now())):
         self.job_report.set_final_error(self.last_error, current_time)
@@ -237,11 +244,11 @@ class KubeJobProgress(Plugin):
             self.last_replicas = replicas
         return replicas
 
-    def job_is_completed(self):
-
+    def job_is_active(self):
+        return False
         job = self.b_v1.read_namespaced_job(
             name=self.app_id, namespace="default")
-
+        self.LOG.log(job.status.active)
         if job.status.active is None:
             return True
         return False
@@ -252,16 +259,14 @@ class KubeJobProgress(Plugin):
             job_progress = self.rds.llen('job:results')
             self._publish_measurement(items_completed=job_progress)
             return job_progress
-
         except Exception as ex:
+            self.LOG.log(ex.message)
             self.LOG.log(("Error: No application found for %s.\
                  %s remaining attempts")
                          % (self.app_id, self.attempts))
-            self.LOG.log(ex)
             self.LOG.log(traceback.format_exc())
             self.report_job()
             self.generate_report()
-            self.LOG.log(ex.message)
             raise
 
     def validate(self, data):
