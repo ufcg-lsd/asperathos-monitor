@@ -55,7 +55,7 @@ class KubeJobProgress(Plugin):
         self.enable_generate_job_report = False
         self.last_replicas = last_replicas
         self.last_error = 0.0
-        self.last_progress = 0
+        self.last_progress = 0.0
         kubernetes.config.load_kube_config(api.k8s_manifest)
         self.b_v1 = kubernetes.client.BatchV1Api()
         self.datasource = self.setup_datasource(info_plugin)
