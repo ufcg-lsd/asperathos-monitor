@@ -24,6 +24,9 @@ See [plugin-development.md](docs/plugin-development.md).
 * Python packages: setuptools, tox and flake8
 
 To **apt** distros, you can use [pre-install.sh](pre-install.sh) to install the requirements.
+```
+./pre-install.sh
+```
 
 ## Install
 Clone the [Monitor repository](https://github.com/ufcg-lsd/asperathos-monitor) in your machine.
