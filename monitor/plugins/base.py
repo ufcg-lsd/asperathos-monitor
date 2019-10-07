@@ -45,8 +45,8 @@ class Plugin(threading.Thread):
         self.app_id = app_id
 
     def stop(self):
-        print "The %s is stopping for %s..." % (type(self).__name__,
-                                                self.app_id)
+        print("The {} is stopping for {}...".format(type(self).__name__,
+                                                    self.app_id))
         self.running = False
 
     # This method must be subscribed by each plugin that
@@ -66,4 +66,4 @@ class Plugin(threading.Thread):
 
             except Exception as ex:
                 self.attempts -= 1
-                print ex.message
+                print(ex.message)

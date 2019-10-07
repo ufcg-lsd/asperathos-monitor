@@ -179,7 +179,7 @@ class KubeJobProgress(Plugin):
                                                     job_progress_error,
                                                     time_progress_error,
                                                     parallelism)
-            self.report_job()
+            self.report_job(timestamp)
 
     def publish_persistent_measurement(self, application_progress_error,
                                        job_progress_error,
@@ -190,9 +190,10 @@ class KubeJobProgress(Plugin):
         self.datasource.send_metrics([time_progress_error])
         self.datasource.send_metrics([parallelism])
 
-    def report_job(self):
+    def report_job(self, timestamp):
         if self.report_flag:
-            current_time = str(datetime.now())
+            current_time = datetime.fromtimestamp(timestamp/1000)\
+                                   .strftime('%Y-%m-%dT%H:%M:%SZ')
             self.job_report.\
                 verify_and_set_max_error(self.last_error, current_time)
             self.job_report.\
@@ -204,7 +205,7 @@ class KubeJobProgress(Plugin):
                     self.enable_generate_job_report = True
                     self.monitoring_application()
                 else:
-                    self.generate_report()
+                    self.generate_report(current_time)
                     self.report_flag = False
 
     def generate_report(self, current_time=str(datetime.now())):
