@@ -19,7 +19,8 @@ class JobReport():
 
     def __init__(self, info_plugin, max_error=(None, None),
                  min_error=(None, None), final_replicas=None,
-                 final_error=(None, None)):
+                 final_error=(None, None), start_timestamp=None,
+                 execution_time=None):
 
         self.info_plugin = info_plugin
         self.scaling_strategy = self.info_plugin['scaling_strategy']
@@ -28,6 +29,8 @@ class JobReport():
         self.min_error = min_error
         self.final_replicas = final_replicas
         self.final_error = final_error
+        self.start_timestamp = start_timestamp
+        self.execution_time = execution_time
 
     def to_dict(self):
         report = {
@@ -36,7 +39,8 @@ class JobReport():
             'max_error': self.max_error,
             'min_error': self.min_error,
             'final_replicas': self.final_replicas,
-            'final_error': self.final_error
+            'final_error': self.final_error,
+            'execution_time': self.execution_time
         }
 
         return report
@@ -47,6 +51,15 @@ class JobReport():
 
     def get_max_error(self):
         return self.max_error
+
+    def set_start_timestamp(self, timestamp):
+        if self.start_timestamp is None:
+            self.start_timestamp = timestamp
+
+    def calculate_execution_time(self, timestamp):
+        if self.execution_time is None:
+            self.execution_time = \
+                int((timestamp - self.start_timestamp) / 1000)
 
     def verify_and_set_max_error(self, current_error, current_time):
 

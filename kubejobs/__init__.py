@@ -192,8 +192,11 @@ class KubeJobProgress(Plugin):
 
     def report_job(self, timestamp):
         if self.report_flag:
+            self.job_report.set_start_timestamp(timestamp)
             current_time = datetime.fromtimestamp(timestamp/1000)\
                                    .strftime('%Y-%m-%dT%H:%M:%SZ')
+            if self.last_progress == 1:
+                self.job_report.calculate_execution_time(timestamp)
             self.job_report.\
                 verify_and_set_max_error(self.last_error, current_time)
             self.job_report.\
@@ -205,10 +208,11 @@ class KubeJobProgress(Plugin):
                     self.enable_generate_job_report = True
                     self.monitoring_application()
                 else:
-                    self.generate_report(current_time)
                     self.report_flag = False
+                    self.job_report.calculate_execution_time(timestamp)
+                    self.generate_report(current_time)
 
-    def generate_report(self, current_time=str(datetime.now())):
+    def generate_report(self, current_time):
         self.job_report.set_final_error(self.last_error, current_time)
         self.job_report.set_final_replicas(self.last_replicas)
         self.job_report.generate_report(self.app_id)
