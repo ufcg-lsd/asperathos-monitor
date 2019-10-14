@@ -64,10 +64,10 @@ def get_job_report(app_id, detailed):
     job = monitored_apps[app_id]
     if not job.report_flag:
         if detailed:
-            return job.get_detailed_report()
+            return job.get_detailed_report(), 200
         else:
-            return job.job_report.to_dict()
-    return {'message': 'Job is running yet!'}
+            return job.job_report.to_dict(), 200
+    return {'message': 'Job is running yet!'}, 202
 
 
 def install_plugin(source, plugin):

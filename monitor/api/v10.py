@@ -48,8 +48,9 @@ def get_job_report(app_id):
     Normal response codes: 200
     Error response codes: 400
     """
-    return jsonify(api.get_job_report(app_id=app_id,
-                                      detailed=False)), 200
+    resp, code = api.get_job_report(app_id=app_id,
+                                      detailed=False)
+    return jsonify(resp), code
 
 
 @rest.get('/monitoring/<app_id>/report/detailed')
@@ -59,9 +60,9 @@ def get_detailed_report(app_id):
     Normal response codes: 200
     Error response codes: 400
     """
-    return jsonify(api.get_job_report(app_id=app_id,
-                                      detailed=True)), 200
-
+    resp, code = api.get_job_report(app_id=app_id,
+                                      detailed=True)
+    return jsonify(resp), code
 
 @rest.post('/plugins')
 def install_plugin(data):
