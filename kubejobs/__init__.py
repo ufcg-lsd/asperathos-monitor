@@ -275,7 +275,6 @@ class KubeJobProgress(Plugin):
 
                 except Exception as ex:
                     self.attempts -= 1
-                    print(ex.message)
 
     def validate(self, data):
         data_model = {
