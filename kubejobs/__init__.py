@@ -190,7 +190,7 @@ class KubeJobProgress(Plugin):
         self.datasource.send_metrics([time_progress_error])
         self.datasource.send_metrics([parallelism])
 
-    def report_job(self, timestamp):
+    def report_job(self, timestamp=time.time() * 1000):
         if self.report_flag:
             self.job_report.set_start_timestamp(timestamp)
             current_time = datetime.fromtimestamp(timestamp/1000)\
@@ -255,10 +255,24 @@ class KubeJobProgress(Plugin):
             self.LOG.log(("Error: No application found for %s.\
                  %s remaining attempts")
                          % (self.app_id, self.attempts))
-            self.report_job()
-            self.generate_report()
             self.LOG.log(ex.message)
             raise
+
+    def run(self):
+            self.running = True
+            while self.running:
+                if self.attempts == 0:
+                    self.report_job()
+                    self.generate_report()
+                    self.stop()
+                    break
+                try:
+                    time.sleep(self.collect_period)
+                    self.monitoring_application()
+
+                except Exception as ex:
+                    self.attempts -= 1
+                    print(ex.message)
 
     def validate(self, data):
         data_model = {
