@@ -190,7 +190,8 @@ class KubeJobProgress(Plugin):
         self.datasource.send_metrics([time_progress_error])
         self.datasource.send_metrics([parallelism])
 
-    def report_job(self, timestamp=time.time() * 1000):
+    def report_job(self, timestamp=None):
+        if timestamp is None: timestamp = time.time() * 1000
         if self.report_flag:
             self.job_report.set_start_timestamp(timestamp)
             current_time = datetime.fromtimestamp(timestamp/1000)\
