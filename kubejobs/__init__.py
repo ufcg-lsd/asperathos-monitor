@@ -259,22 +259,23 @@ class KubeJobProgress(Plugin):
             raise
 
     def run(self):
-            self.running = True
-            while self.running:
-                if self.attempts == 0:
-                    timestamp = time.time() * 1000
-                    self.report_job(timestamp)
-                    current_time = datetime.fromtimestamp(timestamp/1000)\
-                                   .strftime('%Y-%m-%dT%H:%M:%SZ')
-                    self.generate_report(current_time)
-                    self.stop()
-                    break
-                try:
-                    time.sleep(self.collect_period)
-                    self.monitoring_application()
+        self.running = True
+        while self.running:
+            if self.attempts == 0:
+                timestamp = time.time() * 1000
+                self.report_job(timestamp)
+                current_time = datetime.\
+                    fromtimestamp(timestamp/1000).\
+                    strftime('%Y-%m-%dT%H:%M:%SZ')
+                self.generate_report(current_time)
+                self.stop()
+                break
+            try:
+                time.sleep(self.collect_period)
+                self.monitoring_application()
 
-                except Exception as ex:
-                    self.attempts -= 1
+            except Exception:
+                self.attempts -= 1
 
     def validate(self, data):
         data_model = {

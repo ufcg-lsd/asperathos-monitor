@@ -49,7 +49,7 @@ def get_job_report(app_id):
     Error response codes: 400
     """
     resp, code = api.get_job_report(app_id=app_id,
-                                      detailed=False)
+                                    detailed=False)
     return jsonify(resp), code
 
 
@@ -61,8 +61,9 @@ def get_detailed_report(app_id):
     Error response codes: 400
     """
     resp, code = api.get_job_report(app_id=app_id,
-                                      detailed=True)
+                                    detailed=True)
     return jsonify(resp), code
+
 
 @rest.post('/plugins')
 def install_plugin(data):
