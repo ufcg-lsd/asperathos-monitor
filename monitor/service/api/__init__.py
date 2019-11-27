@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
+import configparser
 from monitor.utils.logger import Log
 
 LOG_FILE = "progress.log"
@@ -24,7 +24,7 @@ CONFIG_PATH = "./data/conf"
 
 try:
     # Conf reading
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config.read('./monitor.cfg')
 
     """ General configuration """
@@ -57,5 +57,5 @@ try:
         monasca_api_version = config.get('monasca', 'api_version')
 
 except Exception as e:
-    LOG.log("Error: %s" % e.message)
+    LOG.log("Error: %s" % e)
     quit()

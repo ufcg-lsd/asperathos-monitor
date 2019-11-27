@@ -255,7 +255,7 @@ class KubeJobProgress(Plugin):
             self.LOG.log(("Error: No application found for %s.\
                  %s remaining attempts")
                          % (self.app_id, self.attempts))
-            self.LOG.log(ex.message)
+            self.LOG.log(ex)
             raise
 
     def run(self):

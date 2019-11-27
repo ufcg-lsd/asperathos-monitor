@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
+import configparser
 import mock
 import unittest
 
@@ -29,7 +29,7 @@ class TestManager(unittest.TestCase):
         pass
 
     @unittest.skip
-    @mock.patch('ConfigParser.RawConfigParser')
+    @mock.patch('configparser.RawConfigParser')
     @mock.patch(
         'monitor.utils.monasca.connector.MonascaConnector._get_monasca_client')
     def test_init_manager(self, config_mock, monasca_mock):
@@ -41,7 +41,7 @@ class TestManager(unittest.TestCase):
     @mock.patch(
         'monitor.utils.monasca.connector.MonascaConnector._get_monasca_client')
     def test_get_measurements(self, monasca_mock):
-        ConfigParser.RawConfigParser = mock.Mock()
+        configparser.RawConfigParser = mock.Mock()
         m = MonascaConnector()
         m.get_measurements(None, None)
         monasca_mock.assert_called_once_with()

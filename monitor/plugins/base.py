@@ -16,6 +16,12 @@
 import threading
 import time
 
+from monitor.utils.logger import Log
+
+
+LOG_FILE = "base.log"
+LOG_NAME = "plugin-base"
+
 
 # Plugins must extend Thread to facilitate each parallel plugin execution
 class Plugin(threading.Thread):
@@ -28,7 +34,7 @@ class Plugin(threading.Thread):
 
         # Flag that enable or disable the monitoring logic execution
         self.running = False
-
+        self.LOG = Log(LOG_NAME, LOG_FILE)
         # Dimensions is composed by default only application_id, but for each
         # plugin it can change and it is possible to add some relevant
         # information
@@ -66,4 +72,4 @@ class Plugin(threading.Thread):
 
             except Exception as ex:
                 self.attempts -= 1
-                print(ex.message)
+                self.LOG.log(ex)
