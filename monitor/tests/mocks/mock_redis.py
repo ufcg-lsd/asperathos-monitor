@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from monitor.utils.logger import Log
+
+
 """
 Class that represents a mock of the redis object
 """
@@ -27,6 +30,7 @@ class MockRedis():
 
     def __init__(self):
         self.map = {}
+        self.logger = Log('redis_mock_log', 'redis_mock.log')
 
     """ Function the simulates the push of a job in the
         redis queue
@@ -56,7 +60,7 @@ class MockRedis():
         try:
             return self.map.get(metric_queue).pop(0)
         except Exception as e:
-            print(e)
+            self.logger.log(e)
 
     """ Function the simulates the deletion of a
         redis queue
