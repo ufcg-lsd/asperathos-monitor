@@ -15,6 +15,7 @@
 
 import configparser
 from monitor.utils.logger import Log
+from monitor.service import plugin_service
 
 LOG_FILE = "progress.log"
 LOG_NAME = "kubejobs-progress"

@@ -15,8 +15,9 @@
 
 from monitor import exceptions as ex
 from monitor.service import api
-from monitor.plugins.kubejobs.plugin import KubeJobProgress
-
+from kubejobs import KubeJobProgress
+import kubejobs_cost
+import kubejobs
 
 class MonitorBuilder:
     def __init__(self):
@@ -26,8 +27,12 @@ class MonitorBuilder:
         executor = None
 
         if plugin == "kubejobs":
-            executor = KubeJobProgress(
+            executor = kubejobs.PLUGIN(
                 app_id, plugin_info, retries=api.retries)
+        
+        elif plugin == "kubejobs_cost":
+            executor = kubejobs_cost.PLUGIN(
+                app_id, plugin_info)
 
         else:
             raise ex.BadRequestException()
