@@ -15,9 +15,9 @@
 
 from monitor import exceptions as ex
 from monitor.service import api
-from kubejobs import KubeJobProgress
 import kubejobs_cost
 import kubejobs
+
 
 class MonitorBuilder:
     def __init__(self):
@@ -29,7 +29,7 @@ class MonitorBuilder:
         if plugin == "kubejobs":
             executor = kubejobs.PLUGIN(
                 app_id, plugin_info, retries=api.retries)
-        
+
         elif plugin == "kubejobs_cost":
             executor = kubejobs_cost.PLUGIN(
                 app_id, plugin_info)

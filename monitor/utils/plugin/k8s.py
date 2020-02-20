@@ -19,6 +19,8 @@ import kubernetes as kube
 
 
 kube.config.load_kube_config(api.k8s_manifest)
+
+
 def get_running_pods_from_a_job(job_id, namespace='default'):
 
     api_instance = kube.client.CoreV1Api()
@@ -26,24 +28,24 @@ def get_running_pods_from_a_job(job_id, namespace='default'):
     pod_names = []
     for pod in api_instance.list_namespaced_pod(namespace).items:
         if pod.metadata.labels.get('job-name') == job_id.strip() \
-            and pod.status.phase == 'Running':
+                and pod.status.phase == 'Running':
             pod_names.append(pod.metadata.name)
     return pod_names
 
 
 def convert_cpu_memory_unity(resources):
-    
+
     '''
     Convert cpu unity from Nanocpu to Milicpu
     and memory unity from Kibibyte to Gigabyte
     '''
-    
+
     cpu = resources.get('cpu')
     memory = resources.get('memory')
 
     vcpu = cpu / (10.0 ** 6) / 1000
     gb_memory = (memory * (2 ** 10)) / 10 ** 9
-    
+
     return {
         'cpu': vcpu,
         'memory': gb_memory
@@ -57,7 +59,8 @@ def get_current_job_resources_usage(job_id):
     total_cpu = 0
     total_memory = 0
     cust = kube.client.CustomObjectsApi()
-    for i in cust.list_cluster_custom_object('metrics.k8s.io', 'v1beta1', 'pods').get('items'):
+    for i in cust.list_cluster_custom_object('metrics.k8s.io',
+                                             'v1beta1', 'pods').get('items'):
         if i.get('metadata').get('name') in list_pods:
             for j in i.get('containers'):
                 cpu = j.get('usage').get('cpu')[:-1]
@@ -72,4 +75,3 @@ def get_current_job_resources_usage(job_id):
     })
 
     return converted_usage.get('cpu'), converted_usage.get('memory')
-

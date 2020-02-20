@@ -17,16 +17,13 @@
 from kubejobs import KubeJobProgress
 from monitor.utils.plugin import k8s
 
-import kubernetes as kube
 import requests
 import json
-import math
-import time                                                                                                                                                                                                    
- 
-
+import time
 
 # Think about better metric to use
 DIVISOR = 100
+
 
 class KubeJobCost(KubeJobProgress):
 
@@ -37,7 +34,7 @@ class KubeJobCost(KubeJobProgress):
         self.desired_cost = info_plugin.get('desired_cost')
 
     def monitoring_application(self):
-        
+
         err = self.get_error()
         timestamp = time.time() * 1000
         err = self.get_application_cost_error_manifest(err, timestamp)
@@ -47,23 +44,29 @@ class KubeJobCost(KubeJobProgress):
     def get_error(self):
         rep = self._get_num_replicas()
         cpu_cost, memory_cost = self.get_current_cost()
-        cpu_usage, memory_usage = k8s.get_current_job_resources_usage(self.app_id)
+        cpu_usage, memory_usage = \
+            k8s.get_current_job_resources_usage(self.app_id)
         job_cpu_cost = cpu_cost * cpu_usage
         job_memory_cost = memory_cost * memory_usage
         job_total_cost = job_cpu_cost + job_memory_cost
         current_cost_each_pod = job_total_cost / rep
         desired_num_of_replicas = self.desired_cost / current_cost_each_pod
         err = (rep - desired_num_of_replicas) / DIVISOR
-        self.pretty_print(rep, cpu_cost, memory_cost, cpu_usage, memory_usage, job_total_cost, desired_num_of_replicas, err)
+        self.pretty_print(rep, cpu_cost, memory_cost, cpu_usage,
+                          memory_usage, job_total_cost,
+                          desired_num_of_replicas, err)
 
         return err
-    
+
     def pretty_print(self, rep, cpu_cost, memory_cost,
                      cpu_usage, memory_usage, job_total_cost,
                      desired_rep, err):
-        
-        self.LOG.log('Current Replicas: {}\nDesired Replicas: {}\nCpu usage: {}\nCpu cost: {}\nMemory usage: {}\nMemory cost: {}\nJob cost: {}\nError: {}'.\
-            format(rep, desired_rep, cpu_usage, cpu_cost, memory_usage, memory_cost, job_total_cost, err))
+
+        self.LOG.log('Current Replicas: {}\nDesired Replicas: {}\n'
+                     'Cpu usage: {}\nCpu cost: {}\nMemory usage:'
+                     ' {}\nMemory cost: {}\nJob cost: {}\nError: {}'.
+                     format(rep, desired_rep, cpu_usage, cpu_cost,
+                            memory_usage, memory_cost, job_total_cost, err))
 
     def get_application_cost_error_manifest(self, error, timestamp):
         application_progress_error = {'name': 'application_cost_error',
@@ -76,26 +79,10 @@ class KubeJobCost(KubeJobProgress):
     def get_current_cost(self):
 
         cost = json.loads(requests.get(self.cluster_info_url.strip()).text)
-        total_cost = float(cost.get('cpu_price')), float(cost.get('memory_price'))
+        total_cost = float(cost.get('cpu_price')),\
+            float(cost.get('memory_price'))
 
         return total_cost
 
 
 PLUGIN = KubeJobCost
-
-    
-
-
-
-
-
-
-
-
-
-    
-
-
-
-    
-        
