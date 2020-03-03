@@ -73,3 +73,4 @@ class Plugin(threading.Thread):
             except Exception as ex:
                 self.attempts -= 1
                 self.LOG.log(ex)
+                time.sleep(self.collect_period)
