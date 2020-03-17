@@ -16,10 +16,16 @@
 
 from kubejobs import KubeJobProgress
 from monitor.utils.plugin import k8s
+from monitor.utils.logger import Log
+from monitor.utils.job_report.job_report import JobReport
+from datetime import datetime
 
 import requests
 import json
 import time
+
+LOG_FILE = "progress.log"
+LOG_NAME = "kubejobs-progress"
 
 # Think about better metric to use
 DIVISOR = 100
@@ -36,27 +42,64 @@ class KubeJobCost(KubeJobProgress):
         self.last_error = None
         self.last_rep = None
         self.last_cost = None
+        self.LOG = Log(LOG_NAME, LOG_FILE)
+        self.job_report = JobReport(info_plugin)
 
     def monitoring_application(self):
-        
+        try:        
+            if self.report_flag:
+
+                self.calculate_error()
+                self.LOG.log("Calculated error")
+                timestamp = time.time() * 1000
+                err_manifest = self.get_application_cost_error_manifest(self.last_error, timestamp)
+                self.LOG.log(err_manifest)
+                self.LOG.log("Publishing error")
+                self.rds.rpush(self.metric_queue,
+                            str(err_manifest))
+
+                self.LOG.log("Getting replicas")
+                replicas_manifest = self.get_parallelism_manifest(self.last_replicas, timestamp)
+                self.LOG.log(replicas_manifest)
+
+                reference_manifest = self.get_reference_manifest(timestamp)
+
+                self.LOG.log("Getting cost")
+                current_cost_manifest = self.get_current_cost_manifest(timestamp)
+                self.LOG.log(current_cost_manifest)
+    
+                self.publish_persistent_measurement(err_manifest, reference_manifest,
+                                                    current_cost_manifest, replicas_manifest)
+
+                self.report_job(timestamp)
+
+        except Exception as ex:
+            self.LOG.log(ex)
+
+    def report_job(self, timestamp):
         if self.report_flag:
-            
-            self.calculate_error()
-            timestamp = time.time() * 1000
+            self.LOG.log("report_flag-cost")
+            self.job_report.set_start_timestamp(timestamp)
+            current_time = datetime.fromtimestamp(timestamp/1000)\
+                                   .strftime('%Y-%m-%dT%H:%M:%SZ')
+            if self.last_progress == 1:
+                self.job_report.calculate_execution_time(timestamp)
+            self.job_report.\
+                verify_and_set_max_error(self.last_error, current_time)
+            self.job_report.\
+                verify_and_set_min_error(self.last_error, current_time)
 
-            err_manifest = self.get_application_cost_error_manifest(self.last_error, timestamp)
-            self.rds.rpush(self.metric_queue,
-                        str(err_manifest))
+            if self.job_is_completed():
+                self.report_flag = False
+                self.job_report.calculate_execution_time(timestamp)
+                self.generate_report(current_time)
 
-
-            replicas_manifest = self.get_parallelism_manifest(self.last_replicas, timestamp)
-
-            reference_manifest = self.get_reference_manifest(timestamp)
-
-            current_cost_manifest = self.get_current_cost_manifest(timestamp)
-
-            self.publish_persistent_measurement(err_manifest, reference_manifest,
-                                                current_cost_manifest, replicas_manifest)
+    # TODO: We need to think in a better design solution
+    # for this
+    def get_detailed_report(self):
+        if not self.report_flag:
+            return self.datasource.get_cost_measurements()
+        return {'message': 'Job is still running...'}
 
     def get_reference_manifest(self, timestamp):
         reference_manifest = {'name': 'desired_cost',
@@ -82,9 +125,13 @@ class KubeJobCost(KubeJobProgress):
         job_cpu_cost = cpu_cost * cpu_usage
         job_memory_cost = memory_cost * memory_usage
         job_total_cost = job_cpu_cost + job_memory_cost
-        current_cost_each_pod = job_total_cost / rep
-        desired_num_of_replicas = self.desired_cost / current_cost_each_pod
-        err = (rep - desired_num_of_replicas + 1) / DIVISOR
+        if rep is None:
+            desired_num_of_replicas = 0.0
+            err = 0.0
+        else:
+            current_cost_each_pod = job_total_cost / rep
+            desired_num_of_replicas = self.desired_cost / current_cost_each_pod
+            err = (rep - desired_num_of_replicas + 1) / DIVISOR
         self.pretty_print(rep, cpu_cost, memory_cost, cpu_usage,
                           memory_usage, job_total_cost,
                           desired_num_of_replicas, err)
