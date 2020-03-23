@@ -27,9 +27,6 @@ import time
 LOG_FILE = "progress.log"
 LOG_NAME = "kubejobs-progress"
 
-# Think about better metric to use
-DIVISOR = 100
-
 
 class KubeJobCost(KubeJobProgress):
 
@@ -125,30 +122,23 @@ class KubeJobCost(KubeJobProgress):
         job_cpu_cost = cpu_cost * cpu_usage
         job_memory_cost = memory_cost * memory_usage
         job_total_cost = job_cpu_cost + job_memory_cost
-        if rep is None:
-            desired_num_of_replicas = 0.0
-            err = 0.0
-        else:
-            current_cost_each_pod = job_total_cost / rep
-            desired_num_of_replicas = self.desired_cost / current_cost_each_pod
-            err = (rep - desired_num_of_replicas + 1) / DIVISOR
-        self.pretty_print(rep, cpu_cost, memory_cost, cpu_usage,
-                          memory_usage, job_total_cost,
-                          desired_num_of_replicas, err)
+
+        err = job_total_cost - self.desired_cost
+
+        self.pretty_print(cpu_cost, memory_cost, cpu_usage,
+                          memory_usage, job_total_cost, err)
         self.last_error = err
         self.last_cost = job_total_cost
         self.last_rep = rep
         return err
 
-    def pretty_print(self, rep, cpu_cost, memory_cost,
-                     cpu_usage, memory_usage, job_total_cost,
-                     desired_rep, err):
+    def pretty_print(self, cpu_cost, memory_cost, cpu_usage, 
+                     memory_usage, job_total_cost, err):
 
-        self.LOG.log('Current Replicas: {}\nDesired Replicas: {}\n'
-                     'Cpu usage: {}\nCpu cost: {}\nMemory usage:'
+        self.LOG.log('Cpu usage: {}\nCpu cost: {}\nMemory usage:'
                      ' {}\nMemory cost: {}\nJob cost: {}\nError: {}'.
-                     format(rep, desired_rep, cpu_usage, cpu_cost,
-                            memory_usage, memory_cost, job_total_cost, err))
+                     format(cpu_usage, cpu_cost, memory_usage, 
+                            memory_cost, job_total_cost, err))
 
     def get_application_cost_error_manifest(self, error, timestamp):
         application_progress_error = {'name': 'application_cost_error',
