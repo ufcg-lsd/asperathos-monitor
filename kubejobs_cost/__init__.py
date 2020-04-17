@@ -39,6 +39,7 @@ class KubeJobCost(KubeJobProgress):
         self.last_error = None
         self.last_rep = None
         self.last_cost = None
+        self.metric_queue = "%s:metrics:cost" % self.app_id
         self.LOG = Log(LOG_NAME, LOG_FILE)
         self.job_report = JobReport(info_plugin)
 

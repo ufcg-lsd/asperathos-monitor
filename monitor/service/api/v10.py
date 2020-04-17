@@ -30,21 +30,27 @@ def start_monitoring(data, app_id):
     execute the monitoring logic, but this attribute is not mandatory for all
     the executors."""
 
-    if 'plugin' not in data or 'plugin_info' not in data:
+    if 'plugin_info' not in data:
         API_LOG.log("Missing parameters in request")
         raise ex.BadRequestException()
 
-    plugin = data['plugin']
-    plugin_info = data['plugin_info']
+    for plugin_key in data['plugin_info']:
+        API_LOG.log("Creating plugin: %s" % plugin_key)
+        API_LOG.log(data)
+        plugin = data['plugin_info'][plugin_key]['plugin']
+        plugin_info = data['plugin_info'][plugin_key]
 
-    if app_id not in monitored_apps:
+    # if app_id not in monitored_apps:
         executor = plugin_service.get_plugin(plugin)(app_id, plugin_info)
-        monitored_apps[app_id] = executor
+
+        if app_id not in monitored_apps:
+            monitored_apps[app_id] = []
+        monitored_apps[app_id].append(executor)
         executor.start()
 
-    else:
-        API_LOG.log("The application is already being monitored")
-        raise ex.BadRequestException()
+    # else:
+    #    API_LOG.log("The application is already being monitored")
+    #    raise ex.BadRequestException()
 
 
 def stop_monitoring(app_id):
@@ -52,8 +58,11 @@ def stop_monitoring(app_id):
         API_LOG.log("App doesn't exist")
         raise ex.BadRequestException()
 
+    for plugin in monitored_apps[app_id]:
+        API_LOG.log("Stopping plugin: %s" % plugin)
+        plugin.stop()
     # Stop the plugin and remove from the data structure
-    monitored_apps.pop(app_id, None).stop()
+    monitored_apps.pop(app_id, None)
 
 
 def get_job_report(app_id, detailed):
@@ -61,7 +70,7 @@ def get_job_report(app_id, detailed):
         API_LOG.log("App doesn't exist")
         raise ex.BadRequestException()
 
-    job = monitored_apps[app_id]
+    job = monitored_apps[app_id][0]
     if not job.report_flag:
         if detailed:
             return job.get_detailed_report(), 200
