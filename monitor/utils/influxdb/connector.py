@@ -58,7 +58,7 @@ class InfluxConnector:
         for i in self.get_desired_cost():
             out[i['time']].update({'desired_cost': i['value']})
 
-        for i in self.get_replicas():
+        for i in self.get_replicas_cost():
             out[i['time']].update({'replicas': i['value']})
 
         for i in self.get_application_cost_error():
@@ -80,6 +80,11 @@ class InfluxConnector:
         result = self._get_influx_client().\
             query('select value from application_cost_error;')
         return list(result.get_points(measurement='application_cost_error'))
+
+    def get_replicas_cost(self):
+        result = self._get_influx_client().\
+            query('select value from job_parallelism_cost;')
+        return list(result.get_points(measurement='job_parallelism'))
 
     def get_job_progress(self):
         result = self._get_influx_client().\

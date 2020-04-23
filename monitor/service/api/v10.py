@@ -44,8 +44,8 @@ def start_monitoring(data, app_id):
         executor = plugin_service.get_plugin(plugin)(app_id, plugin_info)
 
         if app_id not in monitored_apps:
-            monitored_apps[app_id] = []
-        monitored_apps[app_id].append(executor)
+            monitored_apps[app_id] = {}
+        monitored_apps[app_id][plugin_key] = executor
         executor.start()
 
     # else:
@@ -58,9 +58,10 @@ def stop_monitoring(app_id):
         API_LOG.log("App doesn't exist")
         raise ex.BadRequestException()
 
-    for plugin in monitored_apps[app_id]:
-        API_LOG.log("Stopping plugin: %s" % plugin)
-        plugin.stop()
+    for plugin_key in monitored_apps[app_id]:
+        API_LOG.log("Stopping plugin: %s" % plugin_key)
+        monitored_apps[app_id][plugin_key].stop()
+
     # Stop the plugin and remove from the data structure
     monitored_apps.pop(app_id, None)
 
@@ -70,13 +71,20 @@ def get_job_report(app_id, detailed):
         API_LOG.log("App doesn't exist")
         raise ex.BadRequestException()
 
-    job = monitored_apps[app_id][0]
-    if not job.report_flag:
-        if detailed:
-            return job.get_detailed_report(), 200
-        else:
-            return job.job_report.to_dict(), 200
-    return {'message': 'Job is running yet!'}, 202
+    for plugin in monitored_apps[app_id]:
+        if monitored_apps[app_id][plugin].report_flag:
+            return {'message': 'Job is running yet!'}, 202
+
+    merged_report = {}
+
+    if detailed:
+        for plugin in monitored_apps[app_id]:
+            merged_report[plugin] = monitored_apps[app_id][plugin].get_detailed_report()
+    else:
+        for plugin in monitored_apps[app_id]:
+            merged_report[plugin] = monitored_apps[app_id][plugin].job_report.to_dict()
+
+    return merged_report, 200
 
 
 def install_plugin(source, plugin):

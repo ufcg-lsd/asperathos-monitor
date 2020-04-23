@@ -115,6 +115,14 @@ class KubeJobCost(KubeJobProgress):
                                  }
         return current_cost_manifest
 
+    def get_parallelism_manifest(self, replicas, timestamp):
+        parallelism = {'name': 'job_parallelism_cost',
+                       'value': replicas,
+                       'timestamp': timestamp,
+                       'dimensions': self.dimensions
+                       }
+        return parallelism
+
     def calculate_error(self):
         rep = self._get_num_replicas()
         cpu_cost, memory_cost = self.get_current_cost()
