@@ -43,30 +43,37 @@ class KubeJobCost(KubeJobProgress):
         self.job_report = JobReport(info_plugin)
 
     def monitoring_application(self):
-        try:        
+        try:
             if self.report_flag:
 
                 self.calculate_error()
                 self.LOG.log("Calculated error")
                 timestamp = time.time() * 1000
-                err_manifest = self.get_application_cost_error_manifest(self.last_error, timestamp)
+                err_manifest = \
+                    self.get_application_cost_error_manifest(self.last_error,
+                                                             timestamp)
                 self.LOG.log(err_manifest)
                 self.LOG.log("Publishing error")
                 self.rds.rpush(self.metric_queue,
-                            str(err_manifest))
+                               str(err_manifest))
 
                 self.LOG.log("Getting replicas")
-                replicas_manifest = self.get_parallelism_manifest(self.last_replicas, timestamp)
+                replicas_manifest = \
+                    self.get_parallelism_manifest(self.last_replicas,
+                                                  timestamp)
                 self.LOG.log(replicas_manifest)
 
                 reference_manifest = self.get_reference_manifest(timestamp)
 
                 self.LOG.log("Getting cost")
-                current_cost_manifest = self.get_current_cost_manifest(timestamp)
+                current_cost_manifest = \
+                    self.get_current_cost_manifest(timestamp)
                 self.LOG.log(current_cost_manifest)
-    
-                self.publish_persistent_measurement(err_manifest, reference_manifest,
-                                                    current_cost_manifest, replicas_manifest)
+
+                self.publish_persistent_measurement(err_manifest,
+                                                    reference_manifest,
+                                                    current_cost_manifest,
+                                                    replicas_manifest)
 
                 self.report_job(timestamp)
 
@@ -105,7 +112,7 @@ class KubeJobCost(KubeJobProgress):
                               'dimensions': self.dimensions
                               }
         return reference_manifest
-    
+
     def get_current_cost_manifest(self, timestamp):
         current_cost_manifest = {'name': 'current_spent',
                                  'value': self.last_cost,
@@ -132,12 +139,12 @@ class KubeJobCost(KubeJobProgress):
         self.last_rep = rep
         return err
 
-    def pretty_print(self, cpu_cost, memory_cost, cpu_usage, 
+    def pretty_print(self, cpu_cost, memory_cost, cpu_usage,
                      memory_usage, job_total_cost, err):
 
         self.LOG.log('Cpu usage: {}\nCpu cost: {}\nMemory usage:'
                      ' {}\nMemory cost: {}\nJob cost: {}\nError: {}'.
-                     format(cpu_usage, cpu_cost, memory_usage, 
+                     format(cpu_usage, cpu_cost, memory_usage,
                             memory_cost, job_total_cost, err))
 
     def get_application_cost_error_manifest(self, error, timestamp):
@@ -155,7 +162,7 @@ class KubeJobCost(KubeJobProgress):
             float(cost.get('memory_price'))
 
         return total_cost
-    
+
     def get_dimensions(self):
         return {'application_id': self.app_id,
                 'service': 'kubejobs_cost'}
