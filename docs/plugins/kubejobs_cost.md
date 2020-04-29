@@ -117,7 +117,7 @@ app = Flask(__name__)
 
 @app.route('/price', methods=['GET'])
 def price():
-    return {'cpu_price':1, 'memory_price':2}
+    return {'cpu_price':1, 'memory_price':3}
 ```
 
 ### Metrics server
