@@ -84,7 +84,7 @@ class InfluxConnector:
     def get_replicas_cost(self):
         result = self._get_influx_client().\
             query('select value from job_parallelism_cost;')
-        return list(result.get_points(measurement='job_parallelism'))
+        return list(result.get_points(measurement='job_parallelism_cost'))
 
     def get_job_progress(self):
         result = self._get_influx_client().\
