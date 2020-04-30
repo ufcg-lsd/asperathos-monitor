@@ -51,8 +51,8 @@ class Plugin(threading.Thread):
         self.app_id = app_id
 
     def stop(self):
-        print("The {} is stopping for {}...".format(type(self).__name__,
-                                                    self.app_id))
+        self.LOG.log("The {} is stopping for {}...".format(type(self).__name__,
+                                                           self.app_id))
         self.running = False
 
     # This method must be subscribed by each plugin that
