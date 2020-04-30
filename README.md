@@ -61,3 +61,4 @@ Endpoints are avaliable on [restapi-endpoints.md](docs/restapi-endpoints.md) doc
 
 ## Avaliable plugins
 * [Kube Jobs](docs/plugins/kubejobs.md)
+* [Kube Jobs_Cost](docs/plugins/kubejobs_cost.md)

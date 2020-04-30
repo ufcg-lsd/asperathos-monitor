@@ -12,16 +12,3 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from flask import Flask
-from monitor.api.v10 import rest
-from monitor.service import api
-from monitor.utils import logger
-
-
-def main():
-    app = Flask(__name__)
-    app.register_blueprint(rest)
-    logger.configure_logging()
-    logger.enable()
-    app.run(host='0.0.0.0', port=api.port)

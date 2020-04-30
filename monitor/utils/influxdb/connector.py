@@ -31,6 +31,7 @@ class InfluxConnector:
     def get_measurements(self):
 
         out = {}
+
         for i in self.get_job_progress():
             out[i['time']] = {'job_progress': i['value']}
 
@@ -44,6 +45,41 @@ class InfluxConnector:
             out[i['time']].update({'error': i['value']})
 
         return out
+
+    # TODO: We need to think in a better design solution
+    # for this
+    def get_cost_measurements(self):
+
+        out = {}
+
+        for i in self.get_current_spent():
+            out[i['time']] = {'current_spent': i['value']}
+
+        for i in self.get_desired_cost():
+            out[i['time']].update({'desired_cost': i['value']})
+
+        for i in self.get_replicas():
+            out[i['time']].update({'replicas': i['value']})
+
+        for i in self.get_application_cost_error():
+            out[i['time']].update({'application_cost_error': i['value']})
+
+        return out
+
+    def get_current_spent(self):
+        result = self._get_influx_client().\
+            query('select value from current_spent;')
+        return list(result.get_points(measurement='current_spent'))
+
+    def get_desired_cost(self):
+        result = self._get_influx_client().\
+            query('select value from desired_cost;')
+        return list(result.get_points(measurement='desired_cost'))
+
+    def get_application_cost_error(self):
+        result = self._get_influx_client().\
+            query('select value from application_cost_error;')
+        return list(result.get_points(measurement='application_cost_error'))
 
     def get_job_progress(self):
         result = self._get_influx_client().\
