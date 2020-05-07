@@ -125,7 +125,7 @@ class InfluxConnector:
         metrics['measurement'] = measurements['name']
         metrics['time'] = datetime.\
             fromtimestamp(measurements['timestamp'] /
-                          1000).strftime('%Y-%m-%dT%H:%M:%SZ')
+                          1000).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         metrics['tags'] = {"host": "server01", "region": "sa-east-1",
                            "job": measurements['dimensions']['application_id']}
         metrics['fields'] = {'value': measurements['value']}
