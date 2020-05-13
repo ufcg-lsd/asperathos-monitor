@@ -14,9 +14,9 @@
 # limitations under the License.
 
 from monascaclient import exc
-
 from monascaclient import client as monclient, ksclient
 from monitor.service import api
+from monitor.utils.logger import Log
 
 
 class MonascaConnector:
@@ -27,6 +27,7 @@ class MonascaConnector:
         self.monasca_project_name = api.monasca_project_name
         self.monasca_api_version = api.monasca_api_version
         self._get_monasca_client()
+        self.LOG = Log('monasca_log', 'monasca.log')
 
     def get_measurements(self, metric_name, dimensions,
                          start_time='2014-01-01T00:00:00Z'):
@@ -40,9 +41,9 @@ class MonascaConnector:
                 name=metric_name, dimensions=dimensions,
                 start_time=start_time, debug=False)
         except exc.HTTPException as httpex:
-            print(httpex)
+            self.LOG.log(httpex)
         except Exception as ex:
-            print(ex)
+            self.LOG.log(ex)
         if len(measurements) > 0:
             return measurements[0]['measurements']
         else:
@@ -87,6 +88,6 @@ class MonascaConnector:
             monasca_client.metrics.create(**batch_metrics)
 
         except exc.HTTPException as httpex:
-            print(httpex)
+            self.LOG.log(httpex)
         except Exception as ex:
-            print(ex)
+            self.LOG.log(ex)
