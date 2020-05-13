@@ -35,9 +35,9 @@ LOG_NAME = "kubejobs-progress"
 
 class KubeJobProgress(Plugin):
 
-    def __init__(self, app_id, info_plugin, collect_period=2,
+    def __init__(self, app_id, info_plugin,
                  retries=10, last_replicas=None):
-
+        collect_period = int(info_plugin.get('collect_period', 2))
         Plugin.__init__(self, app_id, info_plugin,
                         collect_period, retries=retries)
         self.validate(info_plugin)

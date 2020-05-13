@@ -33,7 +33,7 @@ class KubeJobCost(KubeJobProgress):
     def __init__(self, app_id, info_plugin):
 
         KubeJobProgress.__init__(self, app_id, info_plugin,
-                                 collect_period=2, retries=20)
+                                 retries=20)
         self.cluster_info_url = info_plugin.get('cluster_info_url')
         self.desired_cost = info_plugin.get('desired_cost')
         self.last_error = None
