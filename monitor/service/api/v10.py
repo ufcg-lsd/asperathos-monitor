@@ -73,15 +73,18 @@ def get_job_report(app_id, detailed):
 
     for plugin in monitored_apps[app_id]:
         if monitored_apps[app_id][plugin].report_flag:
+            API_LOG.log("Plugin still running:%s" % plugin)
             return {'message': 'Job is running yet!'}, 202
 
     merged_report = {}
 
     if detailed:
         for plugin in monitored_apps[app_id]:
+            API_LOG.log("Getting detailed report for plugin:%s" % plugin)
             merged_report[plugin] = monitored_apps[app_id][plugin].get_detailed_report()
     else:
         for plugin in monitored_apps[app_id]:
+            API_LOG.log("Getting report for plugin:%s" % plugin)
             merged_report[plugin] = monitored_apps[app_id][plugin].job_report.to_dict()
 
     return merged_report, 200
