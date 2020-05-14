@@ -70,7 +70,7 @@ class InfluxConnector:
         out = {}
 
         for i in self.get_real_output_flux():
-            out[i['time']].update({'real_output_flux': i['value']})
+            out[i['time']] = {'real_output_flux': i['value']}
 
         for i in self.get_expected_output_flux():
             out[i['time']].update({'expected_output_flux': i['value']})
