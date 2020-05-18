@@ -84,7 +84,15 @@ class InfluxConnector:
         for i in self.get_error():
             out[i['time']].update({'error': i['value']})
 
+        for i in self.get_queue_size():
+            out[i['time']].update({'queue_size': i['value']})
+
         return out
+
+    def get_queue_size():
+        result = self._get_influx_client().\
+            query('select value from queue_size;')
+        return list(result.get_points(measurement='queue_size'))
 
     def get_current_spent(self):
         result = self._get_influx_client().\
