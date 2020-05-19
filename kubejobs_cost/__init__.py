@@ -85,7 +85,7 @@ class KubeJobCost(KubeJobProgress):
             self.LOG.log("report_flag-cost")
             self.job_report.set_start_timestamp(timestamp)
             current_time = datetime.fromtimestamp(timestamp/1000)\
-                                   .strftime('%Y-%m-%dT%H:%M:%SZ')
+                                   .strftime('%Y-%m-%dT%H:%M:%S.%fZ')
             if self.last_progress == 1:
                 self.job_report.calculate_execution_time(timestamp)
             self.job_report.\
