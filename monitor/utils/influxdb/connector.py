@@ -89,7 +89,7 @@ class InfluxConnector:
 
         return out
 
-    def get_queue_size():
+    def get_queue_size(self):
         result = self._get_influx_client().\
             query('select value from queue_size;')
         return list(result.get_points(measurement='queue_size'))
