@@ -84,7 +84,18 @@ class InfluxConnector:
         for i in self.get_error():
             out[i['time']].update({'error': i['value']})
 
+        for i in self.get_queue_size():
+            out[i['time']].update({'queue_size': i['value']})
+
+        for i in self.get_lease_expired_count():
+            out[i['time']].update({'lease_expired_count': i['value']})
+
         return out
+
+    def get_queue_size(self):
+        result = self._get_influx_client().\
+            query('select value from queue_size;')
+        return list(result.get_points(measurement='queue_size'))
 
     def get_current_spent(self):
         result = self._get_influx_client().\
@@ -135,6 +146,11 @@ class InfluxConnector:
         result = self._get_influx_client().\
             query('select value from input_flux;')
         return list(result.get_points(measurement='input_flux'))
+
+    def get_lease_expired_count(self):
+        result = self._get_influx_client().\
+            query('select value from lease_expired_count;')
+        return list(result.get_points(measurement='lease_expired_count'))
 
     def get_error(self):
         result = self._get_influx_client().\
