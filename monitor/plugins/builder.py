@@ -17,6 +17,7 @@ from monitor import exceptions as ex
 from monitor.service import api
 import kubejobs_cost
 import kubejobs
+import kubejobs_replica_cost
 
 
 class MonitorBuilder:
@@ -32,6 +33,10 @@ class MonitorBuilder:
 
         elif plugin == "kubejobs_cost":
             executor = kubejobs_cost.PLUGIN(
+                app_id, plugin_info)
+
+        elif plugin == "kubejobs_replica_cost":
+            executor = kubejobs_replica_cost.PLUGIN(
                 app_id, plugin_info)
 
         else:
