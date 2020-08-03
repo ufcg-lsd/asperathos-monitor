@@ -17,6 +17,8 @@ from datetime import datetime
 from influxdb import InfluxDBClient
 
 
+# TODO: We need to think in a better design solution
+# for this
 class InfluxConnector:
     def __init__(self, database_url, database_port, database_name,
                  database_user='root', database_password='root'):
@@ -26,7 +28,6 @@ class InfluxConnector:
         self.database_name = database_name
         self.database_user = database_user
         self.database_password = database_password
-        self._get_influx_client()
 
     def get_measurements(self):
 
@@ -46,8 +47,6 @@ class InfluxConnector:
 
         return out
 
-    # TODO: We need to think in a better design solution
-    # for this
     def get_cost_measurements(self):
 
         out = {}
@@ -65,6 +64,38 @@ class InfluxConnector:
             out[i['time']].update({'application_cost_error': i['value']})
 
         return out
+
+    def get_stream_measurements(self):
+
+        out = {}
+
+        for i in self.get_runtime_output_flux():
+            out[i['time']] = {'real_output_flux': i['value']}
+
+        for i in self.get_estimated_output_flux():
+            out[i['time']].update({'expected_output_flux': i['value']})
+
+        for i in self.get_input_flux():
+            out[i['time']].update({'input_flux': i['value']})
+
+        for i in self.get_replicas():
+            out[i['time']].update({'replicas': i['value']})
+
+        for i in self.get_error():
+            out[i['time']].update({'error': i['value']})
+
+        for i in self.get_queue_size():
+            out[i['time']].update({'queue_size': i['value']})
+
+        for i in self.get_lease_expired_count():
+            out[i['time']].update({'lease_expired_count': i['value']})
+
+        return out
+
+    def get_queue_size(self):
+        result = self._get_influx_client().\
+            query('select value from queue_size;')
+        return list(result.get_points(measurement='queue_size'))
 
     def get_current_spent(self):
         result = self._get_influx_client().\
@@ -95,6 +126,26 @@ class InfluxConnector:
         result = self._get_influx_client().\
             query('select value from job_parallelism;')
         return list(result.get_points(measurement='job_parallelism'))
+
+    def get_runtime_output_flux(self):
+        result = self._get_influx_client().\
+            query('select value from real_output_flux;')
+        return list(result.get_points(measurement='real_output_flux')) #The measurement name should be changed later
+
+    def get_estimated_output_flux(self):
+        result = self._get_influx_client().\
+            query('select value from expected_output_flux;')
+        return list(result.get_points(measurement='expected_output_flux')) #The measurement name should be changed later
+
+    def get_input_flux(self):
+        result = self._get_influx_client().\
+            query('select value from input_flux;')
+        return list(result.get_points(measurement='input_flux'))
+
+    def get_lease_expired_count(self):
+        result = self._get_influx_client().\
+            query('select value from lease_expired_count;')
+        return list(result.get_points(measurement='lease_expired_count'))
 
     def get_error(self):
         result = self._get_influx_client().\
