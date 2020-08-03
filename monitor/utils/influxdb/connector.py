@@ -69,10 +69,10 @@ class InfluxConnector:
 
         out = {}
 
-        for i in self.get_real_output_flux():
+        for i in self.get_runtime_output_flux():
             out[i['time']] = {'real_output_flux': i['value']}
 
-        for i in self.get_expected_output_flux():
+        for i in self.get_estimated_output_flux():
             out[i['time']].update({'expected_output_flux': i['value']})
 
         for i in self.get_input_flux():
@@ -127,15 +127,15 @@ class InfluxConnector:
             query('select value from job_parallelism;')
         return list(result.get_points(measurement='job_parallelism'))
 
-    def get_real_output_flux(self):
+    def get_runtime_output_flux(self):
         result = self._get_influx_client().\
             query('select value from real_output_flux;')
-        return list(result.get_points(measurement='real_output_flux'))
+        return list(result.get_points(measurement='real_output_flux')) #The measurement name should be changed later
 
-    def get_expected_output_flux(self):
+    def get_estimated_output_flux(self):
         result = self._get_influx_client().\
             query('select value from expected_output_flux;')
-        return list(result.get_points(measurement='expected_output_flux'))
+        return list(result.get_points(measurement='expected_output_flux')) #The measurement name should be changed later
 
     def get_input_flux(self):
         result = self._get_influx_client().\
