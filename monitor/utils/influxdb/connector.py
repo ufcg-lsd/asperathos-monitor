@@ -74,6 +74,35 @@ class InfluxConnector:
 
         for i in self.get_estimated_output_flux():
             out[i['time']].update({'expected_output_flux': i['value']})
+        
+        for i in self.get_input_flux():
+            out[i['time']].update({'input_flux': i['value']})
+
+        for i in self.get_replicas():
+            out[i['time']].update({'replicas': i['value']})
+
+        for i in self.get_error():
+            out[i['time']].update({'error': i['value']})
+
+        for i in self.get_queue_size():
+            out[i['time']].update({'queue_size': i['value']})
+
+        for i in self.get_lease_expired_count():
+            out[i['time']].update({'lease_expired_count': i['value']})
+
+        return out
+
+    def get_hybrid_stream_measurements(self):
+        out = {}
+
+        for i in self.get_runtime_output_flux():
+           out[i['time']] = {'real_output_flux': i['value']}
+
+        for i in self.get_estimated_output_flux():
+            out[i['time']].update({'expected_output_flux': i['value']})
+
+        for i in self.get_current_output_flux():
+            out[i['time']].update({'current_output_flux': i['value']})
 
         for i in self.get_input_flux():
             out[i['time']].update({'input_flux': i['value']})
@@ -136,6 +165,11 @@ class InfluxConnector:
         result = self._get_influx_client().\
             query('select value from expected_output_flux;')
         return list(result.get_points(measurement='expected_output_flux')) #The measurement name should be changed later
+
+    def get_current_output_flux(self):
+        result = self._get_influx_client().\
+            query('select value from current_output_flux;')
+        return list(result.get_points(measurement='current_output_flux')) #The measurement name should be changed later
 
     def get_input_flux(self):
         result = self._get_influx_client().\
